@@ -5,4 +5,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 };
 
+module.exports = {
+  images: {
+    domains: ['i.pravatar.cc'],
+  },
+};
+
 export default nextConfig;
