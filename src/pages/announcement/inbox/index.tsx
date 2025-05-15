@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import {
   Inbox as InboxIcon,
   Bell,
-  Search,
   Filter,
   Trash2,
   RefreshCw,
@@ -199,9 +198,9 @@ export default function Inbox() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-base-200">
+    <div className="flex flex-col min-h-screen bg-base-200 w-[1158px]">
       {/* Breadcrumbs */}
-      <div className="bg-base-100 p-4 shadow-sm">
+      <div className="bg-base-100 p-4 shadow-sm rounded-sm">
         <div className="max-w-7xl mx-auto">
           <div className="breadcrumbs text-sm">
             <ul>
@@ -368,18 +367,32 @@ export default function Inbox() {
                 <div className="flex-grow"></div>
 
                 {/* Search */}
-                <div className="join">
-                  <div className="join-item btn btn-sm">
-                    <Search size={16} />
-                  </div>
+                <div className="join"></div>
+                <label className="input">
+                  <svg
+                    className="h-[1em] opacity-50"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                  >
+                    <g
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      strokeWidth="2.5"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <path d="m21 21-4.3-4.3"></path>
+                    </g>
+                  </svg>
                   <input
+                    required
                     type="text"
                     placeholder="Tìm kiếm thông báo..."
-                    className="input input-sm join-item input-bordered w-full max-w-xs"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
-                </div>
+                </label>
               </div>
 
               {/* Notification list */}

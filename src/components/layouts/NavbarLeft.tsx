@@ -6,6 +6,7 @@ import {
   Bell,
   CalendarCheck,
   DollarSign,
+  House,
   LayoutDashboard,
   Settings,
   User,
@@ -19,14 +20,16 @@ const NavbarLeft: React.FC = () => {
   const [isSalaryOpen, setIsSalaryOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isSystemOpen, setIsSystemOpen] = useState(false);
+  const [isAccount, setIsAccount] = useState(false);
+  const [isUtility, setIsUtility] = useState(false);
 
   // Tự động mở collapse khi pathname thay đổi
   useEffect(() => {
     setIsPersonnelOpen(
       pathname === "/employees" ||
         pathname === "/departments" ||
-        pathname === "/duty" ||
+        pathname === "/departments/create-department" ||
+        pathname === "/position" ||
         pathname === "/decentralization"
     );
     setIsSalaryOpen(
@@ -39,11 +42,18 @@ const NavbarLeft: React.FC = () => {
         pathname === "/leave/be-on-leave"
     );
     setIsNotificationsOpen(
-      pathname === "/notifications/send" || pathname === "/notifications/inbox"
+      pathname === "/announcement/send-notifications" ||
+        pathname === "/announcement/inbox"
     );
-    setIsSystemOpen(
-      pathname === "/system/email-queue" || pathname === "/system/settings"
+    setIsAccount(
+      pathname === "/account/account-management" ||
+        pathname === "/account/login-permissions"
     );
+    setIsUtility(
+      pathname === "/utility/change-password" ||
+        pathname === "/utility/timekeeping"
+    );
+    setIsUtility(pathname === "" || pathname === "");
   }, [pathname]);
 
   return (
@@ -63,7 +73,7 @@ const NavbarLeft: React.FC = () => {
 
         {/* Dashboard */}
         <div
-          className={`p-4 mt-2 mb-2 flex font-medium hover:bg-blue-300 hover:text-white transition-colors ${
+          className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white transition-colors ${
             pathname === "/" ? "bg-blue-400 text-white" : ""
           }`}
         >
@@ -72,14 +82,14 @@ const NavbarLeft: React.FC = () => {
             className="flex items-center gap-5"
             aria-current={pathname === "/" ? "page" : undefined}
           >
-            <LayoutDashboard className="w-5 h-5" />
+            <House className="w-5 h-5" />
             Bảng điều khiển
           </Link>
         </div>
 
         <div className="w-full min-h-full">
           {/* Nhân sự */}
-          <div className="collapse collapse-arrow mb-2 rounded-none">
+          <div className="collapse collapse-arrow rounded-none">
             <input
               type="checkbox"
               checked={isPersonnelOpen}
@@ -90,11 +100,11 @@ const NavbarLeft: React.FC = () => {
               Nhân sự
             </label>
             <div className="collapse-content">
-              <ul className="menu menu-sm">
+              <ul className="menu menu-sm relative w-[260px]">
                 <li>
                   <Link
                     href="/employees"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/employees" ? "bg-blue-400 text-white" : ""
                     }`}
                     aria-current={
@@ -107,7 +117,7 @@ const NavbarLeft: React.FC = () => {
                 <li>
                   <Link
                     href="/departments"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/departments"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -121,11 +131,11 @@ const NavbarLeft: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    href="/duty"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
-                      pathname === "/duty" ? "bg-blue-400 text-white" : ""
+                    href="/position"
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                      pathname === "/position" ? "bg-blue-400 text-white" : ""
                     }`}
-                    aria-current={pathname === "/duty" ? "page" : undefined}
+                    aria-current={pathname === "/position" ? "page" : undefined}
                   >
                     Chức vụ
                   </Link>
@@ -133,7 +143,7 @@ const NavbarLeft: React.FC = () => {
                 <li>
                   <Link
                     href="/decentralization"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/decentralization"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -150,7 +160,7 @@ const NavbarLeft: React.FC = () => {
           </div>
 
           {/* Lương thưởng */}
-          <div className="collapse collapse-arrow mb-2 rounded-none">
+          <div className="collapse collapse-arrow rounded-none">
             <input
               type="checkbox"
               checked={isSalaryOpen}
@@ -161,11 +171,11 @@ const NavbarLeft: React.FC = () => {
               Lương Thưởng
             </label>
             <div className="collapse-content">
-              <ul className="menu menu-sm">
+              <ul className="menu menu-sm relative w-[260px]">
                 <li>
                   <Link
                     href="/salary/timesheets"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/salary/timesheets"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -180,7 +190,7 @@ const NavbarLeft: React.FC = () => {
                 <li>
                   <Link
                     href="/salary/payroll"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/salary/payroll"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -195,7 +205,7 @@ const NavbarLeft: React.FC = () => {
                 <li>
                   <Link
                     href="/salary/rewards-penalties"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/salary/rewards-penalties"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -214,7 +224,7 @@ const NavbarLeft: React.FC = () => {
           </div>
 
           {/* Nghỉ Phép */}
-          <div className="collapse collapse-arrow mb-2 rounded-none">
+          <div className="collapse collapse-arrow rounded-none">
             <input
               type="checkbox"
               checked={isLeaveOpen}
@@ -225,11 +235,11 @@ const NavbarLeft: React.FC = () => {
               Nghỉ Phép
             </label>
             <div className="collapse-content">
-              <ul className="menu menu-sm">
+              <ul className="menu menu-sm relative w-[260px]">
                 <li>
                   <Link
                     href="/leave/manager-be-on-leave"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/leave/manager-be-on-leave"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -246,7 +256,7 @@ const NavbarLeft: React.FC = () => {
                 <li>
                   <Link
                     href="/leave/be-on-leave"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/leave/be-on-leave"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -263,7 +273,7 @@ const NavbarLeft: React.FC = () => {
           </div>
 
           {/* Thông báo */}
-          <div className="collapse collapse-arrow mb-2 rounded-none">
+          <div className="collapse collapse-arrow rounded-none">
             <input
               type="checkbox"
               checked={isNotificationsOpen}
@@ -274,11 +284,11 @@ const NavbarLeft: React.FC = () => {
               Thông báo
             </label>
             <div className="collapse-content">
-              <ul className="menu menu-sm">
+              <ul className="menu menu-sm relative w-[260px]">
                 <li>
                   <Link
                     href="/announcement/send-notifications"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/announcement/send-notifications"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -295,7 +305,7 @@ const NavbarLeft: React.FC = () => {
                 <li>
                   <Link
                     href="/announcement/inbox"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/announcement/inbox"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -311,23 +321,23 @@ const NavbarLeft: React.FC = () => {
             </div>
           </div>
 
-          {/* Hệ thống */}
-          <div className="collapse collapse-arrow mb-2 rounded-none">
+          {/* Tài khoản */}
+          <div className="collapse collapse-arrow rounded-none">
             <input
               type="checkbox"
-              checked={isSystemOpen}
-              onChange={() => setIsSystemOpen(!isSystemOpen)}
+              checked={isAccount}
+              onChange={() => setIsAccount(!isAccount)}
             />
             <label className="collapse-title font-medium flex items-center gap-5 p-4 hover:bg-blue-300 hover:text-white cursor-pointer transition-colors">
               <Settings className="w-5 h-5" />
               Tài khoản
             </label>
             <div className="collapse-content">
-              <ul className="menu menu-sm">
+              <ul className="menu menu-sm relative w-[260px]">
                 <li>
                   <Link
                     href="/account/account-management"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/account/account-management"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -344,7 +354,7 @@ const NavbarLeft: React.FC = () => {
                 <li>
                   <Link
                     href="/account/login-permissions"
-                    className={`p-4 flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
                       pathname === "/account/login-permissions"
                         ? "bg-blue-400 text-white"
                         : ""
@@ -356,6 +366,54 @@ const NavbarLeft: React.FC = () => {
                     }
                   >
                     Phân quyền đăng nhập
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+          {/* Tiện ích */}
+          <div className="collapse collapse-arrow rounded-none">
+            <input
+              type="checkbox"
+              checked={isUtility}
+              onChange={() => setIsUtility(!isUtility)}
+            />
+            <label className="collapse-title font-medium flex items-center gap-5 p-4 hover:bg-blue-300 hover:text-white cursor-pointer transition-colors">
+              <LayoutDashboard className="w-5 h-5" />
+              Tiện ích
+            </label>
+            <div className="collapse-content">
+              <ul className="menu menu-sm relative w-[260px]">
+                <li>
+                  <Link
+                    href="/utility/timekeeping"
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                      pathname === "/utility/timekeeping"
+                        ? "bg-blue-400 text-white"
+                        : ""
+                    }`}
+                    aria-current={
+                      pathname === "/utility/timekeeping" ? "page" : undefined
+                    }
+                  >
+                    Chấm công
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/utility/change-password"
+                    className={`p-3 text-sm flex font-medium hover:bg-blue-300 hover:text-white rounded-none transition-colors ${
+                      pathname === "/utility/change-password"
+                        ? "bg-blue-400 text-white"
+                        : ""
+                    }`}
+                    aria-current={
+                      pathname === "/utility/change-password"
+                        ? "page"
+                        : undefined
+                    }
+                  >
+                    Đổi Mật Khẩu
                   </Link>
                 </li>
               </ul>

@@ -205,7 +205,6 @@ export default function Index() {
   // pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages] = useState(1);
-  // const [activeTab, setActiveTab] = useState("all");
   const [isFiltersVisible, setIsFiltersVisible] = useState(false);
 
   const handlePageChange = (newPage: number) => {
@@ -226,20 +225,24 @@ export default function Index() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="breadcrumbs text-sm bg-white p-2 shadow-sm">
+    <div className="min-h-screen">
+      <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href={"/"}>Home</Link>
+            <Link href={"/"} className="text-primary">
+              Home
+            </Link>
           </li>
           <li>
-            <Link href={"/employees"}>Employees</Link>
+            <Link href={"/employees"} className="text-primary">
+              Employees
+            </Link>
           </li>
         </ul>
       </div>
 
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm rounded-sm">
         <div className="max-w-7xl mx-auto py-6 px-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-primary">Quản lý Nhân Sự</h1>
@@ -261,26 +264,14 @@ export default function Index() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-6 mb-6">
-          <div
-            className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            // className={`card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
-            //   activeTab === "all" ? "border-2 border-primary" : ""
-            // }`}
-            // onClick={() => setActiveTab("all")}
-          >
+          <div className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <div className="card-body p-4">
               <h2 className="card-title text-lg mb-1">Tất cả nhân viên</h2>
               <p className="text-3xl font-bold">{statusCounts.all}</p>
             </div>
           </div>
 
-          <div
-            className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            // className={`card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
-            //   activeTab === "active" ? "border-2 border-primary" : ""
-            // }`}
-            // onClick={() => setActiveTab("active")}
-          >
+          <div className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <div className="card-body p-4">
               <h2 className="card-title text-lg text-success mb-1">
                 Đang làm việc
@@ -291,13 +282,7 @@ export default function Index() {
             </div>
           </div>
 
-          <div
-            className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            // className={`card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
-            //   activeTab === "leave" ? "border-2 border-primary" : ""
-            // }`}
-            // onClick={() => setActiveTab("leave")}
-          >
+          <div className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <div className="card-body p-4">
               <h2 className="card-title text-lg text-error mb-1">Nghỉ việc</h2>
               <p className="text-3xl font-bold text-error">
@@ -306,13 +291,7 @@ export default function Index() {
             </div>
           </div>
 
-          <div
-            className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            // className={`card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
-            //   activeTab === "maternity" ? "border-2 border-primary" : ""
-            // }`}
-            // onClick={() => setActiveTab("maternity")}
-          >
+          <div className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <div className="card-body p-4">
               <h2 className="card-title text-lg text-warning mb-1">
                 Nghỉ thai sản
@@ -518,11 +497,6 @@ export default function Index() {
                     className="hover:bg-base-100 border-b border-base-200 cursor-pointer"
                     onClick={() => {
                       setSelectedItem(emp);
-                      (
-                        document.getElementById(
-                          "drawer-detail"
-                        ) as HTMLInputElement
-                      ).checked = true;
                     }}
                   >
                     <td className="px-2 py-3 text-center font-medium text-gray-500">

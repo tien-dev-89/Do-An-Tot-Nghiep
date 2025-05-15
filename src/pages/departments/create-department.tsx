@@ -130,7 +130,7 @@ const CreateDepartment: React.FC = () => {
       <div className="p-6 max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Tạo phòng ban mới</h1>
         <div className="card bg-base-200 p-6">
-          <div className="form-control mb-4">
+          <div className="grid gap-2 form-control pb-6">
             <label className="label pr-2">
               <span className="label-text">Tên phòng ban</span>
             </label>
@@ -144,7 +144,7 @@ const CreateDepartment: React.FC = () => {
               required
             />
           </div>
-          <div className="form-control mb-4">
+          <div className="grid gap-2 form-control pb-6">
             <label className="label pr-2">
               <span className="label-text">Mô tả</span>
             </label>
@@ -159,7 +159,7 @@ const CreateDepartment: React.FC = () => {
               }
             />
           </div>
-          <div className="form-control mb-4">
+          <div className="grid gap-2 form-control pb-6">
             <label className="label pr-2">
               <span className="label-text">Trưởng phòng (ID)</span>
             </label>

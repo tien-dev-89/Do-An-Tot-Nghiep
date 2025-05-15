@@ -188,19 +188,20 @@ export default function Payroll() {
 
   return (
     <div>
-      <div className="breadcrumbs text-sm bg-white p-2 shadow-sm">
+      <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href={"/"}>Home</Link>
+            <Link href={"/"}>Trang chủ</Link>
           </li>
           <li>
             <Link href={"/employees"}>Employees</Link>
           </li>
         </ul>
       </div>
+
       <div className="flex flex-col min-h-screen bg-base-200">
         {/* Header */}
-        <header className="bg-base-100 shadow-md">
+        <header className="bg-base-100 shadow-md rounded-sm">
           <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
             <h1 className="text-2xl font-semibold text-primary">Bảng Lương</h1>
             <div className="flex gap-2">

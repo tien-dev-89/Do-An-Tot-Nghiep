@@ -223,50 +223,28 @@ const Departments: React.FC = () => {
   return (
     <div className="bg-base-100 min-h-screen">
       {/* Breadcrumbs */}
-      <div className="bg-base-200">
-        <div className="max-w-7xl mx-auto px-6 py-2">
-          <div className="breadcrumbs text-sm">
-            <ul>
-              <li>
-                <Link href={"/"} className="flex items-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 mr-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                    />
-                  </svg>
-                  Trang chủ
-                </Link>
-              </li>
-              <li>
-                <Link href={"/departments"} className="flex items-center">
-                  <Building2 className="h-4 w-4 mr-1" />
-                  Phòng ban
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
+      <div className="breadcrumbs text-sm">
+        <ul>
+          <li>
+            <Link href={"/"} className="text-primary">
+              Home
+            </Link>
+          </li>
+          <li>
+            <Link href={"/departments"} className="text-primary">
+              Phòng ban
+            </Link>
+          </li>
+        </ul>
       </div>
 
       {/* Header */}
-      <header className="bg-base-100 shadow-md">
+      <header className="bg-base-100 shadow-md rounded-sm">
         <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold text-primary">
               Quản lý Phòng Ban
             </h1>
-            <p className="mt-1 opacity-80 font-semibold text-primary">
-              Quản lý và phân bổ nhân sự theo phòng ban
-            </p>
           </div>
           <div className="flex space-x-2">
             <Link href="/departments/create-department">
@@ -277,23 +255,6 @@ const Departments: React.FC = () => {
           </div>
         </div>
       </header>
-      {/* <header className="bg-primary text-primary-content shadow-lg">
-        <div className="max-w-7xl mx-auto py-6 px-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold">Quản lý Phòng Ban</h1>
-              <p className="mt-1 opacity-80">
-                Quản lý và phân bổ nhân sự theo phòng ban
-              </p>
-            </div>
-            <Link href="/departments/create-department">
-              <button className="btn bg-primary-content text-primary hover:bg-primary-content/90">
-                <PlusCircle className="w-5 h-5 mr-1" /> Tạo phòng ban mới
-              </button>
-            </Link>
-          </div>
-        </div>
-      </header> */}
 
       <div className="max-w-7xl mx-auto py-8 px-6">
         {/* Thông báo thành công */}

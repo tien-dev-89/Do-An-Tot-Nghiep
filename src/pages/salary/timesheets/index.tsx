@@ -396,7 +396,7 @@ export default function TimeSheets() {
       </div>
       <div className="flex flex-col min-h-screen bg-base-200">
         {/* Header */}
-        <header className="bg-base-100 shadow-md">
+        <header className="bg-base-100 shadow-md rounded-sm">
           <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
             <h1 className="text-2xl font-semibold text-primary">
               Bảng Chấm Công

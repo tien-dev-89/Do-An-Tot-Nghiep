@@ -183,7 +183,7 @@ export default function SendNotifications() {
       </div>
 
       {/* Header */}
-      <header className="bg-base-100 shadow-md">
+      <header className="bg-base-100 shadow-md rounded-sm">
         <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-primary">
             <Bell className="inline-block mr-2" size={24} />
@@ -221,7 +221,7 @@ export default function SendNotifications() {
           <div className="bg-base-100 rounded-box shadow-md p-6">
             <form onSubmit={handleSubmit}>
               {/* Notification type */}
-              <div className="form-control mb-4">
+              <div className="grid gap-2 form-control pb-4">
                 <label className="label">
                   <span className="label-text font-medium">Loại thông báo</span>
                 </label>
@@ -237,7 +237,7 @@ export default function SendNotifications() {
               </div>
 
               {/* Title */}
-              <div className="form-control mb-4">
+              <div className="gap-2 form-control pb-4">
                 <label className="label">
                   <span className="label-text font-medium">
                     Tiêu đề thông báo
@@ -256,7 +256,7 @@ export default function SendNotifications() {
               </div>
 
               {/* Message */}
-              <div className="form-control mb-6">
+              <div className="gap-2 form-control pb-4">
                 <label className="label">
                   <span className="label-text font-medium">
                     Nội dung thông báo
@@ -277,7 +277,7 @@ export default function SendNotifications() {
               </div>
 
               {/* Recipients */}
-              <div className="form-control mb-6">
+              <div className="gap-2 form-control pb-4">
                 <label className="label">
                   <span className="label-text font-medium">Người nhận</span>
                 </label>
@@ -418,13 +418,6 @@ export default function SendNotifications() {
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-base-100 shadow-inner p-4">
-        <div className="max-w-7xl mx-auto text-center text-sm text-gray-500">
-          &copy; 2025 Hệ thống quản lý nhân sự
-        </div>
-      </footer>
     </div>
   );
 }

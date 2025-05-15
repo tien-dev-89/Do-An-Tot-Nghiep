@@ -1,7 +1,6 @@
 import Link from "next/link";
 import React, { useState } from "react";
 import {
-  Search,
   Plus,
   Filter,
   Calendar,
@@ -268,7 +267,7 @@ export default function RewardsPenalties() {
     .reduce((sum, item) => sum + item.amount, 0);
 
   return (
-    <div>
+    <div className="w-[1158px]">
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
@@ -281,7 +280,7 @@ export default function RewardsPenalties() {
       </div>
       <div className="flex flex-col min-h-screen bg-base-200">
         {/* Header */}
-        <header className="bg-base-100 shadow-md">
+        <header className="bg-base-100 shadow-md rounded-sm">
           <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
             <h1 className="text-2xl font-semibold text-primary">
               Thưởng | Phạt
@@ -305,17 +304,31 @@ export default function RewardsPenalties() {
             <div className="flex flex-col md:flex-row gap-4 justify-between">
               {/* Search */}
               <div className="flex flex-1 relative">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm theo tên nhân viên hoặc lý do..."
-                  className="input input-bordered w-full pr-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <Search
-                  className="absolute right-3 top-3 text-gray-400"
-                  size={20}
-                />
+                <label className="input">
+                  <svg
+                    className="h-[1em] opacity-50"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                  >
+                    <g
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      strokeWidth="2.5"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <path d="m21 21-4.3-4.3"></path>
+                    </g>
+                  </svg>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Tìm kiếm theo tên nhân viên hoặc lý do..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </label>
               </div>
 
               {/* Filters */}
@@ -490,141 +503,150 @@ export default function RewardsPenalties() {
           </div>
 
           {/* Results */}
-          <div className="bg-base-100 rounded-lg shadow overflow-x-auto">
-            <table className="table w-full">
-              <thead>
-                <tr>
-                  <th>STT</th>
-                  <th
-                    onClick={() => handleSort("employee_name")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Nhân viên
-                      <ArrowUpDown size={16} className="ml-1" />
-                    </div>
-                  </th>
-                  <th>Phòng ban</th>
-                  <th>Loại</th>
-                  <th
-                    onClick={() => handleSort("amount")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Số tiền
-                      <ArrowUpDown size={16} className="ml-1" />
-                    </div>
-                  </th>
-                  <th>Lý do</th>
-                  <th
-                    onClick={() => handleSort("created_at")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Ngày tạo
-                      <ArrowUpDown size={16} className="ml-1" />
-                    </div>
-                  </th>
-                  <th>Trạng thái</th>
-                  <th>Người duyệt</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRewardsPenalties.length > 0 ? (
-                  filteredRewardsPenalties.map((item, index) => (
-                    <tr key={item.id}>
-                      <td>{index + 1}</td>
-                      <td>
-                        <div className="font-medium">{item.employee_name}</div>
-                        <div className="text-xs text-gray-500">
-                          {item.position}
-                        </div>
-                      </td>
-                      <td>{item.department}</td>
-                      <td>
-                        <div
-                          className={`badge ${
+          <div className="bg-base-100 rounded-lg shadow overflow-x-hidden">
+            <div className="overflow-x-auto w-full">
+              <table className="table w-full">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th
+                      onClick={() => handleSort("employee_name")}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        Nhân viên
+                        <ArrowUpDown size={16} className="ml-1" />
+                      </div>
+                    </th>
+                    <th>Phòng ban</th>
+                    <th>Loại</th>
+                    <th
+                      onClick={() => handleSort("amount")}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        Số tiền
+                        <ArrowUpDown size={16} className="ml-1" />
+                      </div>
+                    </th>
+                    <th>Lý do</th>
+                    <th
+                      onClick={() => handleSort("created_at")}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        Ngày tạo
+                        <ArrowUpDown size={16} className="ml-1" />
+                      </div>
+                    </th>
+                    <th>Trạng thái</th>
+                    <th>Người duyệt</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRewardsPenalties.length > 0 ? (
+                    filteredRewardsPenalties.map((item, index) => (
+                      <tr key={item.id}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <div className="font-medium">
+                            {item.employee_name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {item.position}
+                          </div>
+                        </td>
+                        <td>{item.department}</td>
+                        <td>
+                          <div
+                            className={`badge ${
+                              item.type === "Thưởng"
+                                ? "badge-success"
+                                : "badge-error"
+                            } gap-1`}
+                          >
+                            {item.type === "Thưởng" ? (
+                              <Award size={12} />
+                            ) : (
+                              <AlertTriangle size={12} />
+                            )}
+                            {item.type}
+                          </div>
+                        </td>
+                        <td
+                          className={
                             item.type === "Thưởng"
-                              ? "badge-success"
-                              : "badge-error"
-                          } gap-1`}
+                              ? "text-success font-medium"
+                              : "text-error font-medium"
+                          }
                         >
-                          {item.type === "Thưởng" ? (
-                            <Award size={12} />
-                          ) : (
-                            <AlertTriangle size={12} />
+                          {formatCurrency(item.amount)}
+                        </td>
+                        <td>
+                          <div
+                            className="max-w-xs truncate"
+                            title={item.reason}
+                          >
+                            {item.reason}
+                          </div>
+                        </td>
+                        <td>
+                          {new Date(item.created_at).toLocaleDateString(
+                            "vi-VN"
                           )}
-                          {item.type}
-                        </div>
-                      </td>
-                      <td
-                        className={
-                          item.type === "Thưởng"
-                            ? "text-success font-medium"
-                            : "text-error font-medium"
-                        }
-                      >
-                        {formatCurrency(item.amount)}
-                      </td>
-                      <td>
-                        <div className="max-w-xs truncate" title={item.reason}>
-                          {item.reason}
-                        </div>
-                      </td>
-                      <td>
-                        {new Date(item.created_at).toLocaleDateString("vi-VN")}
-                      </td>
-                      <td>
-                        <div
-                          className={`badge ${
-                            item.status === "Đã duyệt"
-                              ? "badge-success"
-                              : item.status === "Chờ duyệt"
-                              ? "badge-warning"
-                              : "badge-error"
-                          } gap-1`}
-                        >
-                          {item.status}
-                        </div>
-                      </td>
-                      <td>{item.approver || "-"}</td>
-                      <td>
-                        <div className="flex gap-1">
-                          <button className="btn btn-sm btn-outline btn-square">
-                            <Edit size={16} />
-                          </button>
-                          <button className="btn btn-sm btn-outline btn-square btn-error">
-                            <Trash size={16} />
+                        </td>
+                        <td>
+                          <div
+                            className={`text-xs p-1 badge ${
+                              item.status === "Đã duyệt"
+                                ? "badge-success"
+                                : item.status === "Chờ duyệt"
+                                ? "badge-warning"
+                                : "badge-error"
+                            } gap-1`}
+                          >
+                            {item.status}
+                          </div>
+                        </td>
+                        <td>{item.approver || "-"}</td>
+                        <td>
+                          <div className="flex gap-1">
+                            <button className="btn btn-sm btn-outline btn-square">
+                              <Edit size={16} />
+                            </button>
+                            <button className="btn btn-sm btn-outline btn-square btn-error">
+                              <Trash size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={10}>
+                        <div className="flex flex-col items-center justify-center py-8">
+                          <p className="text-gray-500 mb-2">
+                            Không tìm thấy dữ liệu phù hợp
+                          </p>
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => {
+                              setSearchQuery("");
+                              setSelectedDepartment("all");
+                              setSelectedType("all");
+                              setSelectedStatus("all");
+                            }}
+                          >
+                            Xóa bộ lọc
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={10}>
-                      <div className="flex flex-col items-center justify-center py-8">
-                        <p className="text-gray-500 mb-2">
-                          Không tìm thấy dữ liệu phù hợp
-                        </p>
-                        <button
-                          className="btn btn-sm btn-outline"
-                          onClick={() => {
-                            setSearchQuery("");
-                            setSelectedDepartment("all");
-                            setSelectedType("all");
-                            setSelectedStatus("all");
-                          }}
-                        >
-                          Xóa bộ lọc
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </main>
       </div>

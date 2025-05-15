@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import Image from "next/image";
 
@@ -31,6 +29,11 @@ interface Props {
 }
 
 export default function DetailEmployee({ item, drawerId }: Props) {
+  // Các state để chỉnh sửa
+  const [avatarUrl, setAvatarUrl] = useState<string>(
+    item?.avatar_url || "https://i.pravatar.cc/300"
+  );
+
   if (!item) {
     return (
       <div className="p-4">
@@ -38,12 +41,6 @@ export default function DetailEmployee({ item, drawerId }: Props) {
       </div>
     );
   }
-
-  // Các state để chỉnh sửa
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const [avatarUrl, setAvatarUrl] = useState<string>(
-    item.avatar_url || "https://i.pravatar.cc/300"
-  );
 
   // Image
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,8 +55,11 @@ export default function DetailEmployee({ item, drawerId }: Props) {
   };
 
   return (
-    <div className="p-4 space-y-3">
-      <div className="grid grid-cols-1 gap-4">
+    <div className="space-y-3">
+      <div
+        className="grid grid-cols-1 gap-4 overflow-y-auto"
+        style={{ maxHeight: "calc(100dvh - 145px)" }}
+      >
         <div className="flex flex-col items-center gap-2">
           <Image
             src={avatarUrl}
@@ -156,8 +156,8 @@ export default function DetailEmployee({ item, drawerId }: Props) {
           </div>
         </div>
       </div>
-      <div className="flex gap-70 mt-6">
-        <label htmlFor={drawerId} className="btn btn-secondary">
+      <div className="flex gap-70">
+        <label htmlFor={drawerId} className="btn btn-soft">
           Đóng
         </label>
         <label htmlFor={drawerId} className="btn btn-primary flex">

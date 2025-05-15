@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/router";
 import { Department } from "./index";
 import { Employee } from "../employees/index";
+import Link from "next/link";
 
 // Dữ liệu giả lập
 const mockDepartments: Department[] = [
@@ -200,6 +201,20 @@ const DepartmentDetail: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <div className="breadcrumbs text-sm">
+        <ul>
+          <li>
+            <Link href={"/"}>Home</Link>
+          </li>
+          <li>
+            <Link href={"/departments"}>Phòng ban</Link>
+          </li>
+          <li>
+            {/* <Link href={"/departments/[id]"}>{department.name}</Link> */}
+            <a>{department.name}</a>
+          </li>
+        </ul>
+      </div>
       <h1 className="text-2xl font-bold mb-6">{department.name}</h1>
       <div className="tabs mb-6">
         <a
@@ -233,7 +248,7 @@ const DepartmentDetail: React.FC = () => {
                 <span>{success}</span>
               </div>
             )}
-            <div className="form-control mb-4">
+            <div className="grid gap-2 form-control pb-6">
               <label className="label">
                 <span className="label-text">Tên phòng ban</span>
               </label>
@@ -245,7 +260,7 @@ const DepartmentDetail: React.FC = () => {
                 placeholder="Nhập tên phòng ban"
               />
             </div>
-            <div className="form-control mb-4">
+            <div className="grid gap-2 form-control mb-4">
               <label className="label">
                 <span className="label-text">Mô tả</span>
               </label>
