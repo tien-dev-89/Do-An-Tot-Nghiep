@@ -1,0 +1,214 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum definitions - Định nghĩa enum
+enum Gender {
+  MALE
+  FEMALE
+  // OTHER
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  PROBATION
+  TERMINATED
+  MATERNITY_LEAVE
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  PERSONAL
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PayrollStatus {
+  PAID
+  UNPAID
+}
+
+enum RoleName {
+  ADMIN
+  HR
+  MANAGER
+  EMPLOYEE
+}
+
+enum NotificationType {
+  PERSONAL
+  INTERNAL
+  SYSTEM
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// Model definitions - Định nghĩa mô hình
+model Employees {
+  employee_id       String              @id @default(uuid())
+  full_name         String
+  avatar_url        String?
+  email             String              @unique
+  phone_number      String?
+  birth_date        DateTime?
+  gender            Gender?
+  address           String?
+  department_id     String?
+  position_id       String?
+  employment_status EmploymentStatus
+  join_date         DateTime
+  leave_date        DateTime?
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @updatedAt
+  department        Departments?        @relation(fields: [department_id], references: [department_id])
+  position          Positions?          @relation(fields: [position_id], references: [position_id])
+  attendance        AttendanceRecords[]
+  leave_requests    LeaveRequests[]
+  payrolls          Payrolls[]
+  notifications     Notifications[]
+  user              Users?
+
+  approved_requests   LeaveRequests[] @relation("Approver") // <== ADD
+  managed_departments Departments[]   @relation("Manager") // <== ADD
+
+  // Departments Departments[] @relation("Manager")
+  // LeaveRequests LeaveRequests[] @relation("Approver")
+}
+
+model Departments {
+  department_id String      @id @default(uuid())
+  manager_id    String?
+  name          String
+  description   String?
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+  employees     Employees[]
+  manager       Employees?  @relation("Manager", fields: [manager_id], references: [employee_id])
+}
+
+model Positions {
+  position_id String      @id @default(uuid())
+  name        String
+  description String?
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  employees   Employees[]
+}
+
+model AttendanceRecords {
+  attendance_id       String    @id @default(uuid())
+  employee_id         String
+  date                DateTime
+  clock_in_time       DateTime?
+  clock_out_time      DateTime?
+  shift_id            String?
+  late_minutes        Int       @default(0)
+  early_leave_minutes Int       @default(0)
+  overtime_hours      Decimal   @default(0.00)
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  employee            Employees @relation(fields: [employee_id], references: [employee_id])
+}
+
+model LeaveRequests {
+  leave_request_id String      @id @default(uuid())
+  employee_id      String
+  leave_type       LeaveType
+  start_date       DateTime
+  end_date         DateTime
+  reason           String?
+  status           LeaveStatus @default(PENDING)
+  approver_id      String?
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
+  employee         Employees   @relation(fields: [employee_id], references: [employee_id])
+  approver         Employees?  @relation("Approver", fields: [approver_id], references: [employee_id])
+}
+
+model Payrolls {
+  payroll_id     String        @id @default(uuid())
+  employee_id    String
+  month          String
+  base_salary    Decimal
+  overtime_bonus Decimal       @default(0.00)
+  late_penalty   Decimal       @default(0.00)
+  total_salary   Decimal
+  status         PayrollStatus @default(UNPAID)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+  employee       Employees     @relation(fields: [employee_id], references: [employee_id])
+}
+
+model Roles {
+  role_id     String      @id @default(uuid())
+  name        RoleName
+  description String?
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  user_roles  UserRoles[]
+}
+
+model UserRoles {
+  user_role_id String   @id @default(uuid())
+  user_id      String
+  role_id      String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  user         Users    @relation(fields: [user_id], references: [user_id])
+  role         Roles    @relation(fields: [role_id], references: [role_id])
+}
+
+model Notifications {
+  notification_id String           @id @default(uuid())
+  employee_id     String
+  title           String
+  message         String
+  type            NotificationType
+  is_read         Boolean          @default(false)
+  created_at      DateTime         @default(now())
+  employee        Employees        @relation(fields: [employee_id], references: [employee_id])
+}
+
+model EmailQueue {
+  email_id   String      @id @default(uuid())
+  to_email   String
+  subject    String
+  body       String
+  status     EmailStatus @default(PENDING)
+  send_at    DateTime?
+  created_at DateTime    @default(now())
+}
+
+model Users {
+  user_id       String      @id @default(uuid())
+  employee_id   String      @unique
+  username      String      @unique
+  password_hash String
+  is_active     Boolean     @default(true)
+  last_login_at DateTime?
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+  employee      Employees   @relation(fields: [employee_id], references: [employee_id])
+  user_roles    UserRoles[]
+}
