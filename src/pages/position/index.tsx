@@ -1,65 +1,57 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlusCircle, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { toast } from "react-toastify";
 import {
   PositionFormModal,
   DeleteConfirmModal,
   Position,
 } from "../../components/modals/PositionModals";
 
-// Dữ liệu mẫu để mô phỏng các chức vụ từ cơ sở dữ liệu
-const initialPositions: Position[] = [
-  {
-    position_id: "1",
-    name: "Giám đốc",
-    description: "Quản lý cấp cao của công ty",
-    created_at: "2025-01-15T09:00:00",
-    updated_at: "2025-01-15T09:00:00",
-  },
-  {
-    position_id: "2",
-    name: "Trưởng phòng IT",
-    description: "Quản lý phòng công nghệ thông tin",
-    created_at: "2025-01-20T10:30:00",
-    updated_at: "2025-03-10T14:20:00",
-  },
-  {
-    position_id: "3",
-    name: "Nhân viên Marketing",
-    description: "Xây dựng và thực hiện chiến lược marketing",
-    created_at: "2025-02-05T08:15:00",
-    updated_at: "2025-02-05T08:15:00",
-  },
-  {
-    position_id: "4",
-    name: "Kế toán",
-    description: "Quản lý tài chính và báo cáo",
-    created_at: "2025-02-10T13:45:00",
-    updated_at: "2025-04-12T11:30:00",
-  },
-  {
-    position_id: "5",
-    name: "Nhân viên kinh doanh",
-    description: "Phát triển kinh doanh và quan hệ khách hàng",
-    created_at: "2025-03-01T09:30:00",
-    updated_at: "2025-03-01T09:30:00",
-  },
-];
-
 const PositionsPage: React.FC = () => {
-  const [positions, setPositions] = useState<Position[]>(initialPositions);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
   const [currentPosition, setCurrentPosition] = useState<
-    Position | { name: string; description: string }
-  >({ name: "", description: "" });
+    Position | { name: string; description: string; department_ids?: string[] }
+  >({ name: "", description: "", department_ids: [] });
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(
     null
   );
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Lọc chức vụ dựa trên từ khóa tìm kiếm
+  // Lấy danh sách chức vụ
+  useEffect(() => {
+    fetchPositions();
+  }, []);
+
+  const fetchPositions = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/positions", {
+        headers: {
+          Authorization: `x ${token}`,
+        },
+      });
+      const data = await res.json();
+      console.log("API GET response:", { status: res.status, data });
+      if (res.ok) {
+        setPositions(data);
+      } else {
+        toast.error(data.error || "Lỗi khi tải danh sách chức vụ");
+      }
+    } catch (error) {
+      console.error("Fetch positions error:", error);
+      toast.error(`Lỗi: ${String(error)}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Lọc chức vụ
   const filteredPositions = positions.filter(
     (position) =>
       position.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -68,7 +60,7 @@ const PositionsPage: React.FC = () => {
 
   const handleAddPosition = (): void => {
     setIsEditing(false);
-    setCurrentPosition({ name: "", description: "" });
+    setCurrentPosition({ name: "", description: "", department_ids: [] });
     setIsFormModalOpen(true);
   };
 
@@ -83,44 +75,10 @@ const PositionsPage: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleDeletePosition = (): void => {
-    if (!positionToDelete) return;
-    setPositions(
-      positions.filter((p) => p.position_id !== positionToDelete.position_id)
-    );
-    setIsDeleteModalOpen(false);
-    setPositionToDelete(null);
-  };
-
-  const handleSavePosition = (): void => {
-    if ("name" in currentPosition && currentPosition.name.trim() === "") return;
-
-    if (isEditing && "position_id" in currentPosition) {
-      setPositions(
-        positions.map((p) =>
-          p.position_id === currentPosition.position_id
-            ? {
-                ...(currentPosition as Position),
-                updated_at: new Date().toISOString(),
-              }
-            : p
-        )
-      );
-    } else {
-      const newPosition: Position = {
-        ...(currentPosition as { name: string; description: string }),
-        position_id: (
-          Math.max(...positions.map((p) => parseInt(p.position_id))) + 1
-        ).toString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setPositions([...positions, newPosition]);
-    }
-    setIsFormModalOpen(false);
-  };
-
-  const handleChangePosition = (field: string, value: string): void => {
+  const handleChangePosition = (
+    field: string,
+    value: string | string[]
+  ): void => {
     setCurrentPosition({
       ...currentPosition,
       [field]: value,
@@ -138,20 +96,27 @@ const PositionsPage: React.FC = () => {
     }).format(date);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href={"/"}>Trang chủ</Link>
+            <Link href="/">Trang chủ</Link>
           </li>
           <li>
-            <Link href={"/position"}>Chức vụ</Link>
+            <Link href="/positions">Chức vụ</Link>
           </li>
         </ul>
       </div>
       <div className="flex flex-col min-h-screen bg-base-200">
-        {/* Header */}
         <header className="bg-base-100 shadow-md rounded-sm">
           <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
             <h1 className="text-2xl font-semibold text-primary">
@@ -169,9 +134,7 @@ const PositionsPage: React.FC = () => {
           </div>
         </header>
 
-        {/* Main content */}
         <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-6">
-          {/* Thanh tìm kiếm và lọc */}
           <div className="mb-6 flex flex-col md:flex-row justify-between gap-4">
             <div className="relative w-full md:w-96">
               <label className="input">
@@ -215,23 +178,66 @@ const PositionsPage: React.FC = () => {
                   className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52"
                 >
                   <li>
-                    <a>Tên (A-Z)</a>
+                    <a
+                      onClick={() =>
+                        setPositions(
+                          [...positions].sort((a, b) =>
+                            a.name.localeCompare(b.name)
+                          )
+                        )
+                      }
+                    >
+                      Tên (A-Z)
+                    </a>
                   </li>
                   <li>
-                    <a>Tên (Z-A)</a>
+                    <a
+                      onClick={() =>
+                        setPositions(
+                          [...positions].sort((a, b) =>
+                            b.name.localeCompare(b.name)
+                          )
+                        )
+                      }
+                    >
+                      Tên (Z-A)
+                    </a>
                   </li>
                   <li>
-                    <a>Ngày tạo (Mới nhất)</a>
+                    <a
+                      onClick={() =>
+                        setPositions(
+                          [...positions].sort(
+                            (a, b) =>
+                              new Date(b.created_at).getTime() -
+                              new Date(a.created_at).getTime()
+                          )
+                        )
+                      }
+                    >
+                      Ngày tạo (Mới nhất)
+                    </a>
                   </li>
                   <li>
-                    <a>Ngày tạo (Cũ nhất)</a>
+                    <a
+                      onClick={() =>
+                        setPositions(
+                          [...positions].sort(
+                            (a, b) =>
+                              new Date(a.created_at).getTime() -
+                              new Date(b.created_at).getTime()
+                          )
+                        )
+                      }
+                    >
+                      Ngày tạo (Cũ nhất)
+                    </a>
                   </li>
                 </ul>
               </div>
             </div>
           </div>
 
-          {/* Bảng dữ liệu */}
           <div className="overflow-x-auto bg-base-100 rounded-lg shadow">
             <table className="table w-full">
               <thead>
@@ -239,6 +245,7 @@ const PositionsPage: React.FC = () => {
                   <th className="w-16">STT</th>
                   <th>Tên chức vụ</th>
                   <th>Mô tả</th>
+                  <th>Số nhân viên</th>
                   <th>Ngày tạo</th>
                   <th>Cập nhật lần cuối</th>
                   <th className="w-24">Thao tác</th>
@@ -250,7 +257,8 @@ const PositionsPage: React.FC = () => {
                     <tr key={position.position_id} className="hover">
                       <td>{index + 1}</td>
                       <td className="font-medium">{position.name}</td>
-                      <td>{position.description}</td>
+                      <td>{position.description || "-"}</td>
+                      <td>{position.employee_count || 0}</td>
                       <td>{formatDate(position.created_at)}</td>
                       <td>{formatDate(position.updated_at)}</td>
                       <td>
@@ -273,7 +281,7 @@ const PositionsPage: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="text-center py-4">
+                    <td colSpan={7} className="text-center py-4">
                       Không tìm thấy chức vụ nào
                     </td>
                   </tr>
@@ -282,7 +290,6 @@ const PositionsPage: React.FC = () => {
             </table>
           </div>
 
-          {/* Phân trang */}
           <div className="mt-4 flex justify-center">
             <div className="join">
               <button className="join-item btn btn-sm">«</button>
@@ -294,21 +301,25 @@ const PositionsPage: React.FC = () => {
           </div>
         </main>
 
-        {/* Import các Modal components */}
         <PositionFormModal
           isOpen={isFormModalOpen}
           isEditing={isEditing}
           currentPosition={currentPosition}
-          onClose={() => setIsFormModalOpen(false)}
-          onSave={handleSavePosition}
+          onClose={() => {
+            setIsFormModalOpen(false);
+            fetchPositions();
+          }}
           onChange={handleChangePosition}
         />
 
         <DeleteConfirmModal
           isOpen={isDeleteModalOpen}
           positionToDelete={positionToDelete}
-          onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={handleDeletePosition}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setPositionToDelete(null);
+            fetchPositions();
+          }}
         />
       </div>
     </div>

@@ -8,3 +8,7 @@
 .navbar-left-menu {
   @apply hover:bg-blue-500 hover:text-white;
 }
+
+.Toastify__toast-container {
+  z-index: 9999;
+}

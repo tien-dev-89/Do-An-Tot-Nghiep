@@ -1,8 +1,24 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import React from "react";
+import { useRouter } from "next/router";
 
 export default function NavbarTop() {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    router.push("/auths/login");
+  };
+
   return (
     <div className="navbar navbar-end w-full bg-base-100 shadow-sm pr-15">
       <div className="flex gap-2">
@@ -54,17 +70,11 @@ export default function NavbarTop() {
             tabIndex={0}
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
-            {/* <li>
-              <a className="justify-between">
-                Profile
-                <span className="badge">New</span>
-              </a>
-            </li> */}
             <li>
               <Link href={"/utility/change-password"}>Thay đổi mật khẩu</Link>
             </li>
             <li>
-              <a>Logout</a>
+              <button onClick={handleLogout}>Logout</button>
             </li>
           </ul>
         </div>

@@ -2,6 +2,9 @@
   "name": "staffly",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,29 +12,45 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@cloudinary/react": "^1.14.3",
+    "@cloudinary/url-gen": "^1.21.0",
+    "@google-cloud/storage": "^7.16.0",
     "@hookform/resolvers": "^5.0.1",
-    "@prisma/client": "^6.7.0",
+    "@prisma/client": "^6.8.2",
     "@tanstack/react-query": "^5.74.11",
+    "@types/jsonwebtoken": "^9.0.9",
     "axios": "^1.9.0",
+    "bcrypt": "^6.0.0",
     "daisyui": "^5.0.30",
+    "googleapis": "^148.0.0",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.507.0",
+    "multer": "^2.0.0",
     "next": "15.3.1",
     "next-auth": "^4.24.11",
-    "prisma": "^6.7.0",
+    "next-connect": "^1.0.0",
+    "nodemailer": "^6.10.1",
+    "prisma": "^6.8.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-hook-form": "^7.56.1",
-    "zod": "^3.24.3"
+    "react-hook-form": "^7.56.4",
+    "react-toastify": "^11.0.5",
+    "zod": "^3.25.20"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.4",
-    "@types/node": "^20",
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^20.17.48",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
     "tailwindcss": "^4.1.4",
-    "typescript": "^5"
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3"
   }
 }

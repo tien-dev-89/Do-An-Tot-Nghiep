@@ -1,21 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
+import { useRouter } from "next/router";
 
-const schema = z.object({
-  email: z.string().email("Vui lòng nhập địa chỉ email hợp lệ"),
-});
+const schema = z
+  .object({
+    newPassword: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
+    confirmPassword: z
+      .string()
+      .min(8, "Mật khẩu xác nhận phải có ít nhất 8 ký tự"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Mật khẩu xác nhận không khớp",
+    path: ["confirmPassword"],
+  });
 
 type FormData = z.infer<typeof schema>;
 
-export default function ForgotPassword() {
+export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const router = useRouter();
+  const { token } = router.query;
 
   const {
     register,
@@ -25,16 +36,24 @@ export default function ForgotPassword() {
     resolver: zodResolver(schema),
   });
 
+  useEffect(() => {
+    if (!token) {
+      setErrorMessage("Token không hợp lệ. Vui lòng thử lại.");
+    }
+  }, [token]);
+
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setErrorMessage("");
     setSuccessMessage("");
 
     try {
-      const response = await axios.post("/api/auths/forgot-password", {
-        email: data.email,
+      const response = await axios.post("/api/auths/reset-password", {
+        token,
+        newPassword: data.newPassword,
       });
       setSuccessMessage(response.data.message);
+      setTimeout(() => router.push("/auths/login"), 2000); // Chuyển hướng sau 2 giây
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         setErrorMessage(
@@ -52,7 +71,7 @@ export default function ForgotPassword() {
     <div className="flex min-h-screen justify-center items-center">
       <Image
         src="/gradient-connection-background.png"
-        alt="Forgot Password"
+        alt="Reset Password"
         layout="fill"
         objectFit="cover"
         className="z-0"
@@ -60,20 +79,22 @@ export default function ForgotPassword() {
       <div className="bg-white shadow-2xl rounded-2xl w-full max-w-md p-8 relative z-10">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold">Quên mật khẩu</h1>
+            <h1 className="text-3xl font-bold">Đặt lại mật khẩu</h1>
             <p className="text-md font-medium text-gray-600 mt-2">
-              Vui lòng nhập địa chỉ email của bạn dưới đây
+              Vui lòng nhập mật khẩu mới của bạn
             </p>
           </div>
 
-          {/* Input email */}
+          {/* Input new password */}
           <div>
-            <label className="block text-gray-700 font-medium">Email</label>
+            <label className="block text-gray-700 font-medium">
+              Mật khẩu mới
+            </label>
             <div className="relative">
               <input
-                {...register("email")}
-                type="email"
-                placeholder="mail@site.com"
+                {...register("newPassword")}
+                type="password"
+                placeholder="Nhập mật khẩu mới"
                 className="w-full p-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
@@ -82,21 +103,50 @@ export default function ForgotPassword() {
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
               >
-                <g
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                  strokeWidth="2.5"
+                <path
                   fill="none"
                   stroke="currentColor"
-                >
-                  <rect width="20" height="16" x="2" y="4" rx="2" />
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                </g>
+                  strokeWidth="2"
+                  d="M12 19c-4 0-7-3-7-7s3-7 7-7 7 3 7 7-3 7-7 7zm0-12v8m-4-4h8"
+                />
               </svg>
             </div>
-            {errors.email && (
+            {errors.newPassword && (
               <p className="text-red-500 text-sm mt-1">
-                {errors.email.message}
+                {errors.newPassword.message}
+              </p>
+            )}
+          </div>
+
+          {/* Input confirm password */}
+          <div>
+            <label className="block text-gray-700 font-medium">
+              Xác nhận mật khẩu
+            </label>
+            <div className="relative">
+              <input
+                {...register("confirmPassword")}
+                type="password"
+                placeholder="Xác nhận mật khẩu"
+                className="w-full p-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <svg
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 opacity-50"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  d="M12 19c-4 0-7-3-7-7s3-7 7-7 7 3 7 7-3 7-7 7zm0-12v8m-4-4h8"
+                />
+              </svg>
+            </div>
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.confirmPassword.message}
               </p>
             )}
           </div>
@@ -116,9 +166,9 @@ export default function ForgotPassword() {
           <button
             type="submit"
             className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 disabled:bg-blue-300"
-            disabled={loading}
+            disabled={loading || !token}
           >
-            {loading ? "Đang xử lý..." : "Tiếp theo"}
+            {loading ? "Đang xử lý..." : "Đặt lại mật khẩu"}
           </button>
 
           <p className="text-sm text-center mt-4">

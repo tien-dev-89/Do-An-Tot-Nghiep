@@ -1,13 +1,13 @@
 import Pagination from "@/components/Pagination";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DetailEmployee from "./detail-employee";
 import AddEmployee from "./add-employee";
 import Image from "next/image";
 import Link from "next/link";
 import { Filter, UserPlus } from "lucide-react";
 
-type Gender = "Nam" | "Nữ" | "Khác";
-type EmploymentStatus = "Đang làm" | "Nghỉ việc" | "Nghỉ thai sản";
+type Gender = "Nam" | "Nữ"; // Loại bỏ ""
+type EmploymentStatus = "Đang làm" | "Thử việc" | "Nghỉ việc" | "Nghỉ thai sản";
 
 interface Employee {
   employee_id: string;
@@ -16,10 +16,12 @@ interface Employee {
   email: string;
   phone_number: string;
   birth_date: string;
-  gender: Gender;
+  gender: Gender | "MALE" | "FEMALE"; // Chấp nhận cả MALE/FEMALE từ API
   address: string;
   department_id: string;
+  department_name: string;
   position_id: string;
+  position_name: string;
   employment_status: EmploymentStatus;
   join_date: string;
   leave_date: string | null;
@@ -27,199 +29,124 @@ interface Employee {
   updated_at: string;
 }
 
-const mockEmployees: Employee[] = [
-  {
-    employee_id: "1",
-    avatar_url: null,
-    full_name: "Nguyễn Văn A",
-    email: "a.nguyen@example.com",
-    phone_number: "0901234567",
-    birth_date: "1990-01-15",
-    gender: "Nam",
-    address: "Hà Nội",
-    department_id: "Nhân sự",
-    position_id: "Trưởng phòng nhân sự",
-    employment_status: "Đang làm",
-    join_date: "2020-06-01",
-    leave_date: null,
-    created_at: "2024-01-01T10:00:00Z",
-    updated_at: "2025-05-04T09:30:00Z",
-  },
-  {
-    employee_id: "2",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Trần Thị B",
-    email: "b.tran@example.com",
-    phone_number: "0912345678",
-    birth_date: "1992-04-20",
-    gender: "Nữ",
-    address: "TP. Hồ Chí Minh",
-    department_id: "Kế toán",
-    position_id: "Trưởng phòng kế toán",
-    employment_status: "Nghỉ việc",
-    join_date: "2018-03-10",
-    leave_date: "2023-12-01",
-    created_at: "2018-03-10T08:00:00Z",
-    updated_at: "2023-12-02T09:00:00Z",
-  },
-  {
-    employee_id: "3",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Phạm Văn C",
-    email: "c.pham@example.com",
-    phone_number: "0934567890",
-    birth_date: "1988-11-05",
-    gender: "Nam",
-    address: "Đà Nẵng",
-    department_id: "Kế toán",
-    position_id: "Nhân viên kế toán",
-    employment_status: "Đang làm",
-    join_date: "2015-01-01",
-    leave_date: null,
-    created_at: "2015-01-01T08:00:00Z",
-    updated_at: "2025-05-04T09:00:00Z",
-  },
-  {
-    employee_id: "4",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Lê Thị D",
-    email: "d.le@example.com",
-    phone_number: "0945678901",
-    birth_date: "1995-07-19",
-    gender: "Nữ",
-    address: "Huế",
-    department_id: "IT",
-    position_id: "pos-004",
-    employment_status: "Nghỉ thai sản",
-    join_date: "2022-08-01",
-    leave_date: null,
-    created_at: "2022-08-01T09:00:00Z",
-    updated_at: "2025-05-01T10:00:00Z",
-  },
-  {
-    employee_id: "5",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Hoàng Văn E",
-    email: "e.hoang@example.com",
-    phone_number: "0956789012",
-    birth_date: "1993-02-28",
-    gender: "Nam",
-    address: "Cần Thơ",
-    department_id: "IT",
-    position_id: "pos-005",
-    employment_status: "Đang làm",
-    join_date: "2019-10-10",
-    leave_date: null,
-    created_at: "2019-10-10T10:00:00Z",
-    updated_at: "2025-04-28T12:00:00Z",
-  },
-  {
-    employee_id: "6",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Đặng Thị F",
-    email: "f.dang@example.com",
-    phone_number: "0967890123",
-    birth_date: "1996-09-09",
-    gender: "Nữ",
-    address: "Hải Phòng",
-    department_id: "IT",
-    position_id: "pos-006",
-    employment_status: "Đang làm",
-    join_date: "2021-01-15",
-    leave_date: null,
-    created_at: "2021-01-15T08:00:00Z",
-    updated_at: "2025-05-02T11:00:00Z",
-  },
-  {
-    employee_id: "7",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Ngô Văn G",
-    email: "g.ngo@example.com",
-    phone_number: "0978901234",
-    birth_date: "1987-12-25",
-    gender: "Nam",
-    address: "Quảng Ninh",
-    department_id: "IT",
-    position_id: "pos-007",
-    employment_status: "Nghỉ việc",
-    join_date: "2010-04-01",
-    leave_date: "2020-06-30",
-    created_at: "2010-04-01T07:00:00Z",
-    updated_at: "2020-07-01T08:00:00Z",
-  },
-  {
-    employee_id: "8",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Vũ Thị H",
-    email: "h.vu@example.com",
-    phone_number: "0989012345",
-    birth_date: "1998-10-10",
-    gender: "Nữ",
-    address: "Bình Dương",
-    department_id: "IT",
-    position_id: "pos-008",
-    employment_status: "Đang làm",
-    join_date: "2024-01-01",
-    leave_date: null,
-    created_at: "2024-01-01T10:00:00Z",
-    updated_at: "2025-05-04T09:30:00Z",
-  },
-  {
-    employee_id: "9",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Trịnh Văn I",
-    email: "i.trinh@example.com",
-    phone_number: "0990123456",
-    birth_date: "1991-06-06",
-    gender: "Nam",
-    address: "Nghệ An",
-    department_id: "IT",
-    position_id: "pos-009",
-    employment_status: "Đang làm",
-    join_date: "2017-07-01",
-    leave_date: null,
-    created_at: "2017-07-01T08:00:00Z",
-    updated_at: "2025-05-03T10:00:00Z",
-  },
-  {
-    employee_id: "10",
-    avatar_url: "https://i.pravatar.cc/",
-    full_name: "Phan Thị J",
-    email: "j.phan@example.com",
-    phone_number: "0909876543",
-    birth_date: "1994-03-03",
-    gender: "Nữ",
-    address: "Đắk Lắk",
-    department_id: "IT",
-    position_id: "pos-010",
-    employment_status: "Đang làm",
-    join_date: "2023-09-01",
-    leave_date: null,
-    created_at: "2023-09-01T08:00:00Z",
-    updated_at: "2025-05-04T10:00:00Z",
-  },
-];
+// Hàm format ngày sang DD/MM/YYYY
+const formatDateToDisplay = (date: string | null): string => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}/${d.getFullYear()}`;
+};
 
 export default function Index() {
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedItem, setSelectedItem] = useState<Employee | null>(null);
-  // pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage] = useState(3);
   const [isFiltersVisible, setIsFiltersVisible] = useState(false);
+  const [filters, setFilters] = useState({
+    status: "",
+    gender: "",
+    department: "",
+    position: "",
+    joinDateFrom: "",
+    joinDateTo: "",
+    search: "",
+  });
+
+  const fetchEmployees = async (page: number = currentPage) => {
+    try {
+      const query = new URLSearchParams({
+        page: page.toString(),
+        limit: itemsPerPage.toString(),
+        ...filters,
+      }).toString();
+      const response = await fetch(`/api/employees?${query}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Lỗi khi lấy danh sách nhân viên");
+      const data = await response.json();
+      console.log("API employees response:", data); // Debug API response
+      setEmployees(data.employees);
+      setTotalItems(data.total);
+      setCurrentPage(page);
+      if (selectedItem) {
+        const updatedEmployee = data.employees.find(
+          (emp: Employee) => emp.employee_id === selectedItem.employee_id
+        );
+        if (updatedEmployee) {
+          console.log("Updating selectedItem:", updatedEmployee); // Debug selectedItem
+          setSelectedItem(updatedEmployee);
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách nhân viên:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, [filters]);
 
   const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
+    fetchEmployees(newPage);
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleApplyFilters = () => {
+    setIsFiltersVisible(false);
+    fetchEmployees(1);
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      status: "",
+      gender: "",
+      department: "",
+      position: "",
+      joinDateFrom: "",
+      joinDateTo: "",
+      search: "",
+    });
+    setCurrentPage(1);
+    fetchEmployees(1);
+  };
+
+  const handleDelete = async (employee_id: string, full_name: string) => {
+    if (confirm(`Bạn có chắc muốn xóa ${full_name}?`)) {
+      try {
+        const response = await fetch(`/api/employees/${employee_id}`, {
+          method: "DELETE",
+        });
+        if (response.ok) {
+          alert("Xóa nhân viên thành công");
+          fetchEmployees(1);
+          if (selectedItem?.employee_id === employee_id) {
+            setSelectedItem(null);
+          }
+        } else {
+          alert("Lỗi khi xóa nhân viên");
+        }
+      } catch (error) {
+        console.error("Lỗi khi xóa nhân viên:", error);
+        alert("Lỗi máy chủ nội bộ");
+      }
     }
   };
 
   const statusCounts = {
-    all: mockEmployees.length,
-    active: mockEmployees.filter((emp) => emp.employment_status === "Đang làm")
+    all: totalItems,
+    active: employees.filter((emp) => emp.employment_status === "Đang làm")
       .length,
-    leave: mockEmployees.filter((emp) => emp.employment_status === "Nghỉ việc")
+    leave: employees.filter((emp) => emp.employment_status === "Nghỉ việc")
       .length,
-    maternity: mockEmployees.filter(
+    maternity: employees.filter(
       (emp) => emp.employment_status === "Nghỉ thai sản"
     ).length,
   };
@@ -241,7 +168,6 @@ export default function Index() {
         </ul>
       </div>
 
-      {/* Header */}
       <header className="bg-white shadow-sm rounded-sm">
         <div className="max-w-7xl mx-auto py-6 px-6">
           <div className="flex justify-between items-center">
@@ -262,7 +188,6 @@ export default function Index() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-6 mb-6">
           <div className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <div className="card-body p-4">
@@ -270,7 +195,6 @@ export default function Index() {
               <p className="text-3xl font-bold">{statusCounts.all}</p>
             </div>
           </div>
-
           <div className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <div className="card-body p-4">
               <h2 className="card-title text-lg text-success mb-1">
@@ -281,7 +205,6 @@ export default function Index() {
               </p>
             </div>
           </div>
-
           <div className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <div className="card-body p-4">
               <h2 className="card-title text-lg text-error mb-1">Nghỉ việc</h2>
@@ -290,7 +213,6 @@ export default function Index() {
               </p>
             </div>
           </div>
-
           <div className="card bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <div className="card-body p-4">
               <h2 className="card-title text-lg text-warning mb-1">
@@ -303,7 +225,6 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <label className="input">
@@ -327,9 +248,10 @@ export default function Index() {
                 type="search"
                 required
                 placeholder="Tìm kiếm theo tên, email, số điện thoại..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
               />
             </label>
-
             <div className="flex gap-2">
               <button
                 onClick={() => setIsFiltersVisible(!isFiltersVisible)}
@@ -342,92 +264,118 @@ export default function Index() {
               </button>
             </div>
           </div>
-
           <div className={`mt-4 ${isFiltersVisible ? "block" : "hidden"}`}>
             <div className="border rounded-lg p-4 bg-base-100">
               <h3 className="text-lg font-medium mb-4">Bộ lọc nâng cao</h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-                {/* Status Filter */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Trạng thái</span>
                   </label>
-                  <select className="select select-bordered w-full">
+                  <select
+                    className="select select-bordered w-full"
+                    value={filters.status}
+                    onChange={(e) =>
+                      handleFilterChange("status", e.target.value)
+                    }
+                  >
                     <option value="">Tất cả trạng thái</option>
-                    <option>Đang làm</option>
-                    <option>Nghỉ việc</option>
-                    <option>Nghỉ thai sản</option>
+                    <option value="Đang làm">Đang làm</option>
+                    <option value="Thử việc">Thử việc</option>
+                    <option value="Nghỉ việc">Nghỉ việc</option>
+                    <option value="Nghỉ thai sản">Nghỉ thai sản</option>
                   </select>
                 </div>
-
-                {/* Gender Filter */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Giới tính</span>
                   </label>
-                  <select className="select select-bordered w-full">
+                  <select
+                    className="select select-bordered w-full"
+                    value={filters.gender}
+                    onChange={(e) =>
+                      handleFilterChange("gender", e.target.value)
+                    }
+                  >
                     <option value="">Tất cả giới tính</option>
-                    <option>Nam</option>
-                    <option>Nữ</option>
-                    <option>Khác</option>
+                    <option value="Nam">Nam</option>
+                    <option value="Nữ">Nữ</option>
                   </select>
                 </div>
-
-                {/* Department Filter */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Phòng ban</span>
                   </label>
-                  <select className="select select-bordered w-full">
+                  <select
+                    className="select select-bordered w-full"
+                    value={filters.department}
+                    onChange={(e) =>
+                      handleFilterChange("department", e.target.value)
+                    }
+                  >
                     <option value="">Tất cả phòng ban</option>
-                    <option>Nhân sự</option>
-                    <option>Kế toán</option>
-                    <option>IT</option>
+                    <option value="Phòng Công nghệ Thông tin">
+                      Phòng Công nghệ Thông tin
+                    </option>
+                    <option value="Phòng Nhân sự">Phòng Nhân sự</option>
+                    <option value="Phòng Marketing">Phòng Marketing</option>
                   </select>
                 </div>
-
-                {/* Position Filter */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">
                       Vị trí công việc
                     </span>
                   </label>
-                  <select className="select select-bordered w-full">
+                  <select
+                    className="select select-bordered w-full"
+                    value={filters.position}
+                    onChange={(e) =>
+                      handleFilterChange("position", e.target.value)
+                    }
+                  >
                     <option value="">Tất cả vị trí</option>
-                    <option>Trưởng phòng</option>
-                    <option>Nhân viên</option>
+                    <option value="Lập trình viên">Lập trình viên</option>
+                    <option value="Chuyên viên nhân sự">
+                      Chuyên viên nhân sự
+                    </option>
+                    <option value="Chuyên viên Marketing">
+                      Chuyên viên Marketing
+                    </option>
                   </select>
                 </div>
-
-                {/* Join Date From */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Ngày vào từ</span>
                   </label>
-                  <input type="date" className="input input-bordered w-full" />
+                  <input
+                    type="date"
+                    className="input input-bordered w-full"
+                    value={filters.joinDateFrom}
+                    onChange={(e) =>
+                      handleFilterChange("joinDateFrom", e.target.value)
+                    }
+                  />
                 </div>
-
-                {/* Join Date To */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Ngày vào đến</span>
                   </label>
-                  <input type="date" className="input input-bordered w-full" />
+                  <input
+                    type="date"
+                    className="input input-bordered w-full"
+                    value={filters.joinDateTo}
+                    onChange={(e) =>
+                      handleFilterChange("joinDateTo", e.target.value)
+                    }
+                  />
                 </div>
               </div>
-
               <div className="divider"></div>
-
               <div className="flex flex-wrap justify-end gap-3 mt-2">
                 <button
                   className="btn btn-outline"
-                  onClick={() => {
-                    // Reset filter logic would go here
-                    // This is where you'd clear your filter state variables
-                    alert("Đã xoá bộ lọc");
-                  }}
+                  onClick={handleResetFilters}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -447,12 +395,7 @@ export default function Index() {
                 </button>
                 <button
                   className="btn btn-primary"
-                  onClick={() => {
-                    // Apply filter logic would go here
-                    // This would filter your employee list based on selected values
-                    alert("Đã áp dụng bộ lọc");
-                    setIsFiltersVisible(false); // Optionally hide filters after applying
-                  }}
+                  onClick={handleApplyFilters}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -475,7 +418,6 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto w-full">
             <table className="table w-full">
@@ -491,16 +433,22 @@ export default function Index() {
                 </tr>
               </thead>
               <tbody>
-                {mockEmployees.map((emp, idx) => (
+                {employees.map((emp, idx) => (
                   <tr
                     key={emp.employee_id}
                     className="hover:bg-base-100 border-b border-base-200 cursor-pointer"
                     onClick={() => {
+                      console.log("Selecting employee:", emp); // Debug emp
                       setSelectedItem(emp);
+                      (
+                        document.getElementById(
+                          "drawer-detail"
+                        ) as HTMLInputElement
+                      ).checked = true;
                     }}
                   >
                     <td className="px-2 py-3 text-center font-medium text-gray-500">
-                      {idx + 1}
+                      {(currentPage - 1) * itemsPerPage + idx + 1}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -520,7 +468,12 @@ export default function Index() {
                         <div>
                           <div className="font-bold">{emp.full_name}</div>
                           <div className="text-sm opacity-70">
-                            {emp.gender} • {emp.join_date}
+                            {emp.gender === "MALE"
+                              ? "Nam"
+                              : emp.gender === "FEMALE"
+                              ? "Nữ"
+                              : emp.gender}{" "}
+                            • {formatDateToDisplay(emp.join_date)}
                           </div>
                         </div>
                       </div>
@@ -538,10 +491,10 @@ export default function Index() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="badge badge-outline badge-lg">
-                        {emp.department_id}
+                        {emp.department_name}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm">{emp.position_id}</td>
+                    <td className="px-4 py-3 text-sm">{emp.position_name}</td>
                     <td className="px-4 py-3">
                       <div
                         className={`badge ${
@@ -586,7 +539,7 @@ export default function Index() {
                           className="btn btn-square btn-sm btn-ghost text-red-500"
                           onClick={(e) => {
                             e.stopPropagation();
-                            alert(`Xoá ${emp.full_name}`);
+                            handleDelete(emp.employee_id, emp.full_name);
                           }}
                         >
                           <svg
@@ -611,18 +564,17 @@ export default function Index() {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
           <div className="px-4 py-4 border-t">
             <Pagination
               currentPage={currentPage}
-              totalPages={totalPages}
+              totalPages={Math.ceil(totalItems / itemsPerPage)}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
               onPageChange={handlePageChange}
             />
           </div>
         </div>
 
-        {/* Drawer chi tiết */}
         <div className="drawer drawer-end z-20">
           <input id="drawer-detail" type="checkbox" className="drawer-toggle" />
           <div className="drawer-side">
@@ -646,9 +598,7 @@ export default function Index() {
                   <DetailEmployee
                     item={selectedItem}
                     drawerId="drawer-detail"
-                    fetchTasks={function (): Promise<void> {
-                      throw new Error("Function not implemented.");
-                    }}
+                    fetchTasks={fetchEmployees}
                   />
                 ) : (
                   <p>Không có dữ liệu</p>
@@ -658,7 +608,6 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Drawer thêm dữ liệu */}
         <div className="drawer drawer-end z-20">
           <input id="drawer-add" type="checkbox" className="drawer-toggle" />
           <div className="drawer-side">
@@ -677,11 +626,8 @@ export default function Index() {
               </div>
               <div className="p-6">
                 <AddEmployee
-                  item={selectedItem}
                   drawerId="drawer-add"
-                  fetchTasks={function (): Promise<void> {
-                    throw new Error("Function not implemented.");
-                  }}
+                  fetchTasks={fetchEmployees}
                 />
               </div>
             </div>

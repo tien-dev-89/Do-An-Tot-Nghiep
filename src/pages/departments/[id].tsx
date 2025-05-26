@@ -1,216 +1,195 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Department } from "./index";
-import { Employee } from "../employees/index";
 import Link from "next/link";
-
-// Dữ liệu giả lập
-const mockDepartments: Department[] = [
-  {
-    department_id: "1",
-    name: "Phòng Kỹ thuật",
-    manager_id: "101",
-    manager_name: "Nguyễn Văn An",
-    description: "Phòng chịu trách nhiệm phát triển và bảo trì phần mềm",
-  },
-  {
-    department_id: "2",
-    name: "Phòng Nhân sự",
-    manager_id: "102",
-    manager_name: "Trần Thị Bình",
-    description: "Phòng quản lý tuyển dụng, đào tạo và phúc lợi nhân sự",
-  },
-  {
-    department_id: "3",
-    name: "Phòng Marketing",
-    manager_id: "104",
-    manager_name: "Phạm Minh Đức",
-    description: "Phòng phụ trách chiến lược quảng bá và thương hiệu",
-  },
-  {
-    department_id: "4",
-    name: "Phòng Tài chính",
-    manager_id: "107",
-    manager_name: "Lê Thị Hoa",
-    description: "Phòng quản lý ngân sách và kế toán",
-  },
-];
-
-const mockEmployees: Employee[] = [
-  {
-    employee_id: "101",
-    full_name: "Nguyễn Văn An",
-    department_id: "1",
-    employment_status: "Đang làm",
-    email: "nguyenvanan@example.com",
-    phone: "0905123456",
-  },
-  {
-    employee_id: "102",
-    full_name: "Trần Thị Bình",
-    department_id: "2",
-    employment_status: "Đang làm",
-    email: "tranthibinh@example.com",
-    phone: "0916234567",
-  },
-  {
-    employee_id: "103",
-    full_name: "Lê Văn Cường",
-    department_id: "1",
-    employment_status: "Thử việc",
-    email: "levancuong@example.com",
-    phone: "0927345678",
-  },
-  {
-    employee_id: "104",
-    full_name: "Phạm Minh Đức",
-    department_id: "3",
-    employment_status: "Đang làm",
-    email: "phamminhduc@example.com",
-    phone: "0938456789",
-  },
-  {
-    employee_id: "105",
-    full_name: "Hoàng Thị E",
-    department_id: "3",
-    employment_status: "Đang làm",
-    email: "hoangthie@example.com",
-    phone: "0949567890",
-  },
-  {
-    employee_id: "106",
-    full_name: "Đỗ Quang Phát",
-    department_id: "1",
-    employment_status: "Đang làm",
-    email: "doquangphat@example.com",
-    phone: "0950678901",
-  },
-  {
-    employee_id: "107",
-    full_name: "Lê Thị Hoa",
-    department_id: "4",
-    employment_status: "Đang làm",
-    email: "lethihoa@example.com",
-    phone: "0961789012",
-  },
-  {
-    employee_id: "108",
-    full_name: "Nguyễn Thanh Hùng",
-    department_id: "4",
-    employment_status: "Thử việc",
-    email: "nguyenthanhhung@example.com",
-    phone: "0972890123",
-  },
-  {
-    employee_id: "109",
-    full_name: "Vũ Thị Kim",
-    department_id: "2",
-    employment_status: "Đang làm",
-    email: "vuthikim@example.com",
-    phone: "0983901234",
-  },
-  {
-    employee_id: "110",
-    full_name: "Trương Văn Long",
-    department_id: "3",
-    employment_status: "Nghỉ thai sản",
-    email: "truongvanlong@example.com",
-    phone: "0994012345",
-  },
-];
+import { toast } from "react-toastify";
+import { Department } from "@/types/employee";
 
 const DepartmentDetail: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
   const [activeTab, setActiveTab] = useState<"details" | "members">("details");
-  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
-  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
-  const [newEmployeeId, setNewEmployeeId] = useState<string>("");
+  const [department, setDepartment] = useState<Department | null>(null);
   const [editName, setEditName] = useState<string>("");
   const [editDescription, setEditDescription] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const department = departments.find((dept) => dept.department_id === id);
-  const departmentEmployees = employees.filter(
-    (emp) => emp.department_id === id && emp.employment_status !== "Nghỉ việc"
-  );
-  const employeeCount = departmentEmployees.length;
+  // Toast thử nghiệm
+  useEffect(() => {
+    console.log("Running test toast in DepartmentDetail");
+    toast.success("Test toast - DepartmentDetail loaded", {
+      autoClose: 3000,
+      position: "top-right",
+      theme: "light",
+    });
+  }, []);
 
-  // Khởi tạo giá trị chỉnh sửa khi phòng ban được tải
-  React.useEffect(() => {
-    if (department) {
-      setEditName(department.name);
-      setEditDescription(department.description || "");
-    }
-  }, [department]);
+  // Fetch dữ liệu phòng ban
+  useEffect(() => {
+    if (!id) return;
+    const fetchDepartment = async () => {
+      try {
+        setIsLoading(true);
+        console.log(`Fetching department with id: ${id}`);
+        const res = await fetch(`/api/departments/${id}`);
+        const data = await res.json();
+        console.log("API GET response:", { status: res.status, data });
+        if (res.ok) {
+          setDepartment(data);
+          setEditName(data.name);
+          setEditDescription(data.description || "");
+        } else {
+          toast.error(data.error || "Không tìm thấy phòng ban", {
+            autoClose: 3000,
+            position: "top-right",
+            theme: "light",
+          });
+        }
+      } catch (error) {
+        console.error("Fetch department error:", error);
+        toast.error(`Lỗi khi tải dữ liệu phòng ban: ${String(error)}`, {
+          autoClose: 3000,
+          position: "top-right",
+          theme: "light",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDepartment();
+  }, [id]);
 
-  const handleAddEmployee = () => {
-    if (newEmployeeId) {
-      setEmployees((prev) => [
-        ...prev,
-        {
-          employee_id: newEmployeeId,
-          full_name: `Nhân viên ${newEmployeeId}`,
-          department_id: id as string,
-          employment_status: "Đang làm",
-          email: `nhanvien${newEmployeeId}@example.com`,
-          phone: `0905${newEmployeeId.padStart(6, "0")}`,
-        },
-      ]);
-      setNewEmployeeId("");
+  const handleRemoveEmployee = async (employeeId: string) => {
+    try {
+      console.log(`Removing employee: ${employeeId}`);
+      const res = await fetch(`/api/departments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove", employee_id: employeeId }),
+      });
+      const data = await res.json();
+      console.log("Remove employee response:", { status: res.status, data });
+      if (res.ok) {
+        setDepartment((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            employees:
+              prev.employees?.filter((emp) => emp.employee_id !== employeeId) ||
+              [],
+            employee_count:
+              data.employee_count ?? (prev.employee_count || 0) - 1,
+          };
+        });
+        toast.success("Xóa nhân viên hoàn thành", {
+          autoClose: 3000,
+          position: "top-right",
+          theme: "light",
+        });
+      } else {
+        toast.error(data.error || "Lỗi khi xóa nhân viên", {
+          autoClose: 3000,
+          position: "top-right",
+          theme: "light",
+        });
+      }
+    } catch (error) {
+      console.error("Remove employee error:", error);
+      toast.error(`Lỗi khi xóa nhân viên: ${String(error)}`, {
+        autoClose: 3000,
+        position: "top-right",
+        theme: "light",
+      });
     }
   };
 
-  const handleRemoveEmployee = (employeeId: string) => {
-    setEmployees((prev) =>
-      prev.map((emp) =>
-        emp.employee_id === employeeId
-          ? { ...emp, employment_status: "Nghỉ việc" }
-          : emp
-      )
-    );
-  };
-
-  const handleSaveDepartment = () => {
+  const handleSaveDepartment = async () => {
     if (!editName.trim()) {
-      setError("Tên phòng ban không được để trống");
-      setSuccess("");
+      toast.error("Tên phòng ban không được để trống", {
+        autoClose: 3000,
+        position: "top-right",
+        theme: "light",
+      });
       return;
     }
 
-    setDepartments((prev) =>
-      prev.map((dept) =>
-        dept.department_id === id
-          ? {
-              ...dept,
-              name: editName.trim(),
-              description: editDescription.trim() || null,
-            }
-          : dept
-      )
-    );
-    setError("");
-    setSuccess("Cập nhật phòng ban thành công");
-    setTimeout(() => setSuccess(""), 3000); // Xóa thông báo sau 3 giây
+    try {
+      console.log("Saving department:", {
+        name: editName,
+        description: editDescription,
+      });
+      const res = await fetch(`/api/departments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName, description: editDescription }),
+      });
+      const data = await res.json();
+      console.log("Save department response:", { status: res.status, data });
+      if (res.ok) {
+        setDepartment((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            name: data.name,
+            description: data.description || null,
+            employee_count: data.employee_count ?? prev.employee_count,
+          };
+        });
+        toast.success("Cập nhật phòng ban hoàn thành", {
+          autoClose: 3000,
+          position: "top-right",
+          theme: "light",
+        });
+      } else {
+        toast.error(data.error || "Lỗi khi cập nhật phòng ban", {
+          autoClose: 3000,
+          position: "top-right",
+          theme: "light",
+        });
+      }
+    } catch (error) {
+      console.error("Save department error:", error);
+      toast.error(`Lỗi khi cập nhật phòng ban: ${String(error)}`, {
+        autoClose: 3000,
+        position: "top-right",
+        theme: "light",
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
 
   if (!department) {
     return <div className="p-6">Phòng ban không tồn tại</div>;
   }
+
+  // Lọc nhân viên theo tìm kiếm
+  const departmentEmployees =
+    department.employees
+      ?.filter((emp) => emp.employment_status !== "Nghỉ việc")
+      .filter(
+        (emp) =>
+          emp.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          emp.email.toLowerCase().includes(searchQuery.toLowerCase())
+      ) || [];
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href={"/"}>Home</Link>
+            <Link href="/">Home</Link>
           </li>
           <li>
-            <Link href={"/departments"}>Phòng ban</Link>
+            <Link href="/departments">Phòng ban</Link>
           </li>
           <li>
-            {/* <Link href={"/departments/[id]"}>{department.name}</Link> */}
             <a>{department.name}</a>
           </li>
         </ul>
@@ -238,16 +217,6 @@ const DepartmentDetail: React.FC = () => {
       <div className="card bg-base-200 p-6">
         {activeTab === "details" && (
           <div>
-            {error && (
-              <div className="alert alert-error mb-4">
-                <span>{error}</span>
-              </div>
-            )}
-            {success && (
-              <div className="alert alert-success mb-4">
-                <span>{success}</span>
-              </div>
-            )}
             <div className="grid gap-2 form-control pb-6">
               <label className="label">
                 <span className="label-text">Tên phòng ban</span>
@@ -276,7 +245,7 @@ const DepartmentDetail: React.FC = () => {
               {department.manager_name || "Chưa chỉ định"}
             </p>
             <p className="mb-4">
-              <strong>Số nhân viên:</strong> {employeeCount}
+              <strong>Số nhân viên:</strong> {department.employee_count || 0}
             </p>
             <div className="flex justify-end">
               <button
@@ -293,24 +262,15 @@ const DepartmentDetail: React.FC = () => {
           <div>
             <div className="form-control mb-4">
               <label className="label">
-                <span className="label-text">Thêm nhân viên (ID)</span>
+                <span className="label-text">Tìm kiếm nhân viên</span>
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  className="input input-bordered flex-1"
-                  value={newEmployeeId}
-                  onChange={(e) => setNewEmployeeId(e.target.value)}
-                  placeholder="Nhập ID nhân viên"
-                />
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  onClick={handleAddEmployee}
-                >
-                  Thêm
-                </button>
-              </div>
+              <input
+                type="text"
+                className="input input-bordered"
+                placeholder="Nhập tên hoặc email nhân viên"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <div className="mt-4">
               <h4 className="font-semibold mb-2">Danh sách nhân viên:</h4>
@@ -321,7 +281,7 @@ const DepartmentDetail: React.FC = () => {
                       <tr>
                         <th>STT</th>
                         <th>Họ và tên</th>
-                        <th>ID nhân viên</th>
+                        <th>Giới tính</th>
                         <th>Email</th>
                         <th>Số điện thoại</th>
                         <th>Chức vụ</th>
@@ -334,7 +294,7 @@ const DepartmentDetail: React.FC = () => {
                         <tr key={emp.employee_id}>
                           <td>{index + 1}</td>
                           <td>{emp.full_name}</td>
-                          <td>{emp.employee_id}</td>
+                          <td>{emp.gender || "Chưa xác định"}</td>
                           <td>{emp.email}</td>
                           <td>{emp.phone}</td>
                           <td>
@@ -359,7 +319,7 @@ const DepartmentDetail: React.FC = () => {
                   </table>
                 </div>
               ) : (
-                <p>Chưa có nhân viên trong phòng ban này.</p>
+                <p>Chưa có nhân viên phù hợp trong phòng ban này.</p>
               )}
             </div>
           </div>
