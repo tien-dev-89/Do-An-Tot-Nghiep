@@ -1,19 +1,19 @@
-import { PrismaClient, Gender, EmploymentStatus } from '@prisma/client';
-import { NextApiRequest, NextApiResponse } from 'next';
+import { PrismaClient, Gender, EmploymentStatus } from "@prisma/client";
+import { NextApiRequest, NextApiResponse } from "next";
 
 const prisma = new PrismaClient();
 
 // Ánh xạ giá trị từ client sang enum Prisma
 const genderMap: Record<string, Gender | null> = {
-  'Nam': Gender.MALE,
-  'Nữ': Gender.FEMALE
+  "Nam": Gender.MALE,
+  "Nữ": Gender.FEMALE,
 };
 
 const employmentStatusMap: Record<string, EmploymentStatus> = {
-  'Đang làm': EmploymentStatus.ACTIVE,
-  'Thử việc': EmploymentStatus.PROBATION,
-  'Nghỉ việc': EmploymentStatus.TERMINATED,
-  'Nghỉ thai sản': EmploymentStatus.MATERNITY_LEAVE,
+  "Đang làm": EmploymentStatus.ACTIVE,
+  "Thử việc": EmploymentStatus.PROBATION,
+  "Nghỉ việc": EmploymentStatus.TERMINATED,
+  "Nghỉ thai sản": EmploymentStatus.MATERNITY_LEAVE,
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { id } = req.query;
 
   switch (method) {
-    case 'GET': {
+    case "GET": {
       try {
         const employee = await prisma.employees.findUnique({
           where: { employee_id: id as string },
@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         if (!employee) {
-          return res.status(404).json({ error: 'Không tìm thấy nhân viên' });
+          return res.status(404).json({ error: "Không tìm thấy nhân viên" });
         }
 
         const formattedEmployee = {
@@ -40,33 +40,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           avatar_url: employee.avatar_url,
           full_name: employee.full_name,
           email: employee.email,
-          phone_number: employee.phone_number || '',
-          birth_date: employee.birth_date ? employee.birth_date.toISOString().split('T')[0] : '',
-          gender: employee.gender === Gender.MALE ? 'Nam' : employee.gender === Gender.FEMALE ? 'Nữ' : '',
-          address: employee.address || '',
-          department_id: employee.department ? employee.department.department_id : '',
-          department_name: employee.department ? employee.department.name : '',
-          position_id: employee.position ? employee.position.position_id : '',
-          position_name: employee.position ? employee.position.name : '',
+          phone_number: employee.phone_number || "",
+          birth_date: employee.birth_date ? employee.birth_date.toISOString().split("T")[0] : "",
+          gender:
+            employee.gender === Gender.MALE
+              ? "Nam"
+              : employee.gender === Gender.FEMALE
+              ? "Nữ"
+              : "",
+          address: employee.address || "",
+          department_id: employee.department ? employee.department.department_id : "",
+          department_name: employee.department ? employee.department.name : "",
+          position_id: employee.position ? employee.position.position_id : "",
+          position_name: employee.position ? employee.position.name : "",
           employment_status:
-            employee.employment_status === EmploymentStatus.ACTIVE ? 'Đang làm' :
-            employee.employment_status === EmploymentStatus.PROBATION ? 'Thử việc' :
-            employee.employment_status === EmploymentStatus.TERMINATED ? 'Nghỉ việc' :
-            'Nghỉ thai sản',
-          join_date: employee.join_date ? employee.join_date.toISOString().split('T')[0] : '',
-          leave_date: employee.leave_date ? employee.leave_date.toISOString().split('T')[0] : null,
+            employee.employment_status === EmploymentStatus.ACTIVE
+              ? "Đang làm"
+              : employee.employment_status === EmploymentStatus.PROBATION
+              ? "Thử việc"
+              : employee.employment_status === EmploymentStatus.TERMINATED
+              ? "Nghỉ việc"
+              : "Nghỉ thai sản",
+          join_date: employee.join_date ? employee.join_date.toISOString().split("T")[0] : "",
+          leave_date: employee.leave_date ? employee.leave_date.toISOString().split("T")[0] : null,
           created_at: employee.created_at.toISOString(),
           updated_at: employee.updated_at.toISOString(),
         };
 
         return res.status(200).json(formattedEmployee);
       } catch (error) {
-        console.error('Lỗi khi lấy chi tiết nhân viên:', error);
-        return res.status(500).json({ error: 'Lỗi máy chủ nội bộ', details: (error as Error).message });
+        console.error("Lỗi khi lấy chi tiết nhân viên:", error);
+        return res.status(500).json({ error: "Lỗi máy chủ nội bộ", details: (error as Error).message });
       }
     }
 
-    case 'PUT': {
+    case "PUT": {
       try {
         const {
           full_name,
@@ -82,19 +90,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           avatar_url,
         } = req.body;
 
-        console.log('Payload nhận được:', req.body);
-        console.log('Giá trị gender nhận được:', `"${gender}"`, 'Type:', typeof gender, 'Length:', gender?.length);
+        console.log("Payload nhận được:", req.body);
+        console.log("Giá trị gender nhận được:", `"${gender}"`, "Type:", typeof gender, "Length:", gender?.length);
 
         // Kiểm tra các trường bắt buộc
         if (!full_name || !email || !employment_status) {
-          console.error('Thiếu các trường bắt buộc:', { full_name, email, employment_status });
-          return res.status(400).json({ error: 'Thiếu các trường bắt buộc: full_name, email, employment_status' });
+          console.error("Thiếu các trường bắt buộc:", { full_name, email, employment_status });
+          return res.status(400).json({ error: "Thiếu các trường bắt buộc: full_name, email, employment_status" });
         }
 
         // Kiểm tra định dạng email
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          console.error('Email không hợp lệ:', email);
-          return res.status(400).json({ error: 'Email không hợp lệ' });
+          console.error("Email không hợp lệ:", email);
+          return res.status(400).json({ error: "Email không hợp lệ" });
         }
 
         // Kiểm tra email trùng lặp
@@ -105,8 +113,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
         if (existingEmployee) {
-          console.error('Email đã tồn tại:', email);
-          return res.status(400).json({ error: 'Email đã tồn tại' });
+          console.error("Email đã tồn tại:", email);
+          return res.status(400).json({ error: "Email đã tồn tại" });
         }
 
         // Kiểm tra nhân viên tồn tại
@@ -114,8 +122,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           where: { employee_id: id as string },
         });
         if (!employee) {
-          console.error('Không tìm thấy nhân viên:', id);
-          return res.status(404).json({ error: 'Không tìm thấy nhân viên' });
+          console.error("Không tìm thấy nhân viên:", id);
+          return res.status(404).json({ error: "Không tìm thấy nhân viên" });
         }
 
         // Kiểm tra department_id (nếu có)
@@ -124,8 +132,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             where: { department_id },
           });
           if (!department) {
-            console.error('Phòng ban không hợp lệ:', department_id);
-            return res.status(400).json({ error: 'Phòng ban không hợp lệ' });
+            console.error("Phòng ban không hợp lệ:", department_id);
+            return res.status(400).json({ error: "Phòng ban không hợp lệ" });
           }
         }
 
@@ -135,46 +143,61 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             where: { position_id },
           });
           if (!position) {
-            console.error('Vị trí không hợp lệ:', position_id);
-            return res.status(400).json({ error: 'Vị trí không hợp lệ' });
+            console.error("Vị trí không hợp lệ:", position_id);
+            return res.status(400).json({ error: "Vị trí không hợp lệ" });
           }
         }
 
         // Xử lý gender
-        let mappedGender = null;
-        console.log('Kiểm tra gender:', `"${gender}"`, gender === 'Nam', gender === 'Nữ');
+        let mappedGender: Gender | null = null;
+        const cleanGender = gender ? gender.toString().trim() : "";
+        console.log("Gender sau khi trim:", `"${cleanGender}"`);
 
-        const cleanGender = gender ? gender.toString().trim() : '';
-        console.log('Gender sau khi trim:', `"${cleanGender}"`);
-
-        // Chấp nhận cả "Nam"/"Nữ" và "MALE"/"FEMALE"
-        if (cleanGender === 'MALE' || cleanGender === 'FEMALE') {
-          mappedGender = cleanGender; // Giữ nguyên giá trị enum
-        } else if (cleanGender === 'Nam' || cleanGender === 'Nữ') {
+        if (cleanGender === "MALE" || cleanGender === "FEMALE") {
+          mappedGender = cleanGender as Gender; // Chuyển chuỗi thành enum
+        } else if (cleanGender === "Nam" || cleanGender === "Nữ") {
           mappedGender = genderMap[cleanGender];
-        } else if (cleanGender !== '') {
-          console.error('Giới tính không hợp lệ:', `"${cleanGender}"`);
-          return res.status(400).json({ error: 'Giới tính chỉ chấp nhận: Nam, Nữ, MALE hoặc FEMALE' });
+        } else if (cleanGender !== "") {
+          console.error("Giới tính không hợp lệ:", `"${cleanGender}"`);
+          return res.status(400).json({ error: "Giới tính chỉ chấp nhận: Nam, Nữ, MALE hoặc FEMALE" });
         }
 
         // Ánh xạ employment_status
-        const mappedEmploymentStatus = employmentStatusMap[employment_status];
-        if (!mappedEmploymentStatus) {
-          console.error('Trạng thái không hợp lệ:', employment_status);
-          return res.status(400).json({ error: 'Trạng thái không hợp lệ. Phải là: Đang làm, Thử việc, Nghỉ việc, Nghỉ thai sản' });
+        let mappedEmploymentStatus: EmploymentStatus;
+        if (
+          employment_status === "ACTIVE" ||
+          employment_status === "PROBATION" ||
+          employment_status === "TERMINATED" ||
+          employment_status === "MATERNITY_LEAVE"
+        ) {
+          mappedEmploymentStatus = employment_status as EmploymentStatus;
+        } else {
+          mappedEmploymentStatus = employmentStatusMap[employment_status];
+          if (!mappedEmploymentStatus) {
+            console.error("Trạng thái không hợp lệ:", employment_status);
+            return res.status(400).json({ error: "Trạng thái không hợp lệ. Phải là: Đang làm, Thử việc, Nghỉ việc, Nghỉ thai sản" });
+          }
         }
 
-        // Kiểm tra định dạng ngày
-        const parsedBirthDate = birth_date ? new Date(birth_date) : null;
-        if (birth_date && (!parsedBirthDate || isNaN(parsedBirthDate.getTime()))) {
-          console.error('Ngày sinh không hợp lệ:', birth_date);
-          return res.status(400).json({ error: 'Ngày sinh không hợp lệ' });
+        // Xử lý định dạng ngày
+        const parseDate = (dateStr: string) => {
+          if (!dateStr) return null;
+          const [day, month, year] = dateStr.split("/");
+          const parsedDate = new Date(`${year}-${month}-${day}`);
+          if (isNaN(parsedDate.getTime())) return null;
+          return parsedDate;
+        };
+
+        const parsedBirthDate = birth_date ? parseDate(birth_date) : null;
+        if (birth_date && !parsedBirthDate) {
+          console.error("Ngày sinh không hợp lệ:", birth_date);
+          return res.status(400).json({ error: "Ngày sinh không hợp lệ, định dạng phải là DD/MM/YYYY" });
         }
 
-        const parsedJoinDate = join_date ? new Date(join_date) : null;
-        if (join_date && (!parsedJoinDate || isNaN(parsedJoinDate.getTime()))) {
-          console.error('Ngày vào làm không hợp lệ:', join_date);
-          return res.status(400).json({ error: 'Ngày vào làm không hợp lệ' });
+        const parsedJoinDate = join_date ? parseDate(join_date) : null;
+        if (join_date && !parsedJoinDate) {
+          console.error("Ngày vào làm không hợp lệ:", join_date);
+          return res.status(400).json({ error: "Ngày vào làm không hợp lệ, định dạng phải là DD/MM/YYYY" });
         }
 
         // Cập nhật nhân viên
@@ -196,38 +219,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
 
-        console.log('Nhân viên đã cập nhật:', updatedEmployee);
-        return res.status(200).json({ message: 'Cập nhật nhân viên thành công', employee: updatedEmployee });
+        console.log("Nhân viên đã cập nhật:", updatedEmployee);
+        return res.status(200).json({ message: "Cập nhật nhân viên thành công", employee: updatedEmployee });
       } catch (error) {
-        console.error('Lỗi khi cập nhật nhân viên:', error);
-        return res.status(500).json({ error: 'Lỗi máy chủ nội bộ', details: (error as Error).message });
+        console.error("Lỗi khi cập nhật nhân viên:", error);
+        return res.status(500).json({ error: "Lỗi máy chủ nội bộ", details: (error as Error).message });
       }
     }
 
-    case 'DELETE': {
+    case "DELETE": {
       try {
         const employee = await prisma.employees.findUnique({
           where: { employee_id: id as string },
         });
 
         if (!employee) {
-          console.error('Không tìm thấy nhân viên:', id);
-          return res.status(404).json({ error: 'Không tìm thấy nhân viên' });
+          console.error("Không tìm thấy nhân viên:", id);
+          return res.status(404).json({ error: "Không tìm thấy nhân viên" });
         }
 
         await prisma.employees.delete({
           where: { employee_id: id as string },
         });
 
-        return res.status(200).json({ message: 'Xóa nhân viên thành công' });
+        return res.status(200).json({ message: "Xóa nhân viên thành công" });
       } catch (error) {
-        console.error('Lỗi khi xóa nhân viên:', error);
-        return res.status(500).json({ error: 'Lỗi máy chủ nội bộ', details: (error as Error).message });
+        console.error("Lỗi khi xóa nhân viên:", error);
+        return res.status(500).json({ error: "Lỗi máy chủ nội bộ", details: (error as Error).message });
       }
     }
 
     default:
-      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+      res.setHeader("Allow", ["GET", "PUT", "DELETE"]);
       return res.status(405).json({ error: `Phương thức ${req.method} không được phép` });
   }
 }

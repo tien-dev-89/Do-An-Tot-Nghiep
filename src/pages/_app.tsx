@@ -54,7 +54,26 @@ export default function App({ Component, pageProps }: AppProps) {
           </MainLayout>
         )} */}
         <Component {...pageProps} />
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </AuthWrapper>
+    </>
+  ) : (
+    // <MainLayout>
+    //   <Component {...pageProps} />
+    // </MainLayout>
+    <AuthWrapper>
+      <Component {...pageProps} />
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -67,13 +86,6 @@ export default function App({ Component, pageProps }: AppProps) {
         pauseOnHover
         theme="light"
       />
-    </>
-  ) : (
-    // <MainLayout>
-    //   <Component {...pageProps} />
-    // </MainLayout>
-    <AuthWrapper>
-      <Component {...pageProps} />
     </AuthWrapper>
   );
 }

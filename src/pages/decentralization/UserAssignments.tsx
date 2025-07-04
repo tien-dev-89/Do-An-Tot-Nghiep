@@ -1,14 +1,11 @@
-import React, { useState } from "react";
-import { UserPlus } from "lucide-react";
-import {
-  Role,
-  Employee,
-  UserRole,
-  AssignRoleModal,
-  RemoveAssignmentModal,
-} from "@/components/modals/DecentralizationModals";
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { toast } from "react-toastify";
+import { Role, Employee, UserRole } from "@/types/decentralization";
 
 interface UserAssignmentsProps {
+  token: string;
   roles: Role[];
   employees: Employee[];
   userRoles: UserRole[];
@@ -16,222 +13,280 @@ interface UserAssignmentsProps {
 }
 
 const UserAssignments: React.FC<UserAssignmentsProps> = ({
+  token,
   roles,
   employees,
   userRoles,
   setUserRoles,
 }) => {
-  const [searchUserTerm, setSearchUserTerm] = useState<string>("");
-  const [isAssignRoleModalOpen, setIsAssignRoleModalOpen] =
-    useState<boolean>(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
     null
   );
-  const [selectedRole, setSelectedRole] = useState<string>("");
-  const [isRemoveAssignmentModalOpen, setIsRemoveAssignmentModalOpen] =
-    useState<boolean>(false);
-  const [assignmentToRemove, setAssignmentToRemove] = useState<UserRole | null>(
-    null
-  );
+  const [emailInput, setEmailInput] = useState<string>("");
+  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Lọc nhân viên và vai trò phân bổ dựa trên từ khóa tìm kiếm
-  const userRolesWithNames = userRoles.map((ur) => {
-    const employee = employees.find((e) => e.employee_id === ur.employee_id);
-    const role = roles.find((r) => r.role_id === ur.role_id);
-    return {
-      ...ur,
-      employee_name: employee?.full_name || "Không xác định",
-      role_name: role?.name || "Không xác định",
-    };
-  });
-
-  const filteredUserRoles = userRolesWithNames.filter(
-    (ur) =>
-      ur.employee_name.toLowerCase().includes(searchUserTerm.toLowerCase()) ||
-      ur.role_name.toLowerCase().includes(searchUserTerm.toLowerCase())
-  );
-
-  // Hàm xử lý
-  const handleAssignRole = (): void => {
-    setSelectedEmployee(null);
-    setSelectedRole("");
-    setIsAssignRoleModalOpen(true);
-    setTimeout(() => {
-      const modal = document.getElementById("assign_role") as HTMLDialogElement;
-      if (modal) modal.showModal();
-    }, 0);
+  const fetchWithRetry = async (
+    url: string,
+    options: RequestInit,
+    retries = 2
+  ): Promise<Response> => {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      return response;
+    } catch (error) {
+      if (retries > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        return fetchWithRetry(url, options, retries - 1);
+      }
+      throw error;
+    }
   };
 
-  const handleSaveAssignment = (): void => {
-    if (!selectedEmployee || !selectedRole) return;
-    const existingAssignment = userRoles.find(
-      (ur) =>
-        ur.employee_id === selectedEmployee.employee_id &&
-        ur.role_id === selectedRole
-    );
-    if (existingAssignment) {
-      alert("Nhân viên này đã được giao vai trò này!");
+  const fetchUserRoles = async () => {
+    try {
+      const response = await fetchWithRetry("/api/user-roles", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      setUserRoles(data.data.userRoles);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Lỗi khi tải phân quyền";
+      setError(message);
+      toast.error(message);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) {
+      setError("Vui lòng đăng nhập lại");
+      toast.error("Phiên đăng nhập hết hạn, vui lòng đăng nhập lại");
       return;
     }
-    const newAssignment: UserRole = {
-      user_role_id: (
-        Math.max(...userRoles.map((ur) => parseInt(ur.user_role_id))) + 1
-      ).toString(),
-      employee_id: selectedEmployee.employee_id,
-      role_id: selectedRole,
+    fetchUserRoles();
+  }, [token]);
+
+  // Lọc nhân viên dựa trên email nhập
+  useEffect(() => {
+    if (emailInput.trim()) {
+      const filtered = employees.filter((employee) =>
+        employee.email?.toLowerCase().includes(emailInput.toLowerCase())
+      );
+      setFilteredEmployees(filtered);
+      setIsDropdownOpen(true);
+    } else {
+      setFilteredEmployees([]);
+      setIsDropdownOpen(false);
+    }
+  }, [emailInput, employees]);
+
+  // Đóng dropdown khi nhấp ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
     };
-    setUserRoles([...userRoles, newAssignment]);
-    setIsAssignRoleModalOpen(false);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Chọn nhân viên từ gợi ý, điền email đầy đủ vào input
+  const handleSelectEmployee = (employee: Employee) => {
+    console.log("Selected employee:", employee); // Debug log
+    setSelectedEmployeeId(employee.employee_id); // Lưu ID nhân viên
+    setEmailInput(employee.email || ""); // Thay thế input bằng email đầy đủ
+    setIsDropdownOpen(false); // Đóng dropdown
   };
 
-  const handleRemoveAssignmentConfirmation = (assignment: UserRole): void => {
-    setAssignmentToRemove(assignment);
-    setIsRemoveAssignmentModalOpen(true);
-    setTimeout(() => {
-      const modal = document.getElementById(
-        "confirm_cancel"
-      ) as HTMLDialogElement;
-      if (modal) modal.showModal();
-    }, 0);
+  const handleAssignRole = async () => {
+    if (!selectedEmployeeId || !selectedRole) {
+      toast.error("Vui lòng chọn nhân viên và vai trò");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetchWithRetry("/api/user-roles", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          employee_id: selectedEmployeeId,
+          role_id: selectedRole,
+        }),
+      });
+
+      const data = await response.json();
+      toast.success("Gán vai trò thành công");
+      setUserRoles([...userRoles, data.data]);
+      setSelectedEmployeeId(null); // Reset nhân viên
+      setEmailInput(""); // Reset input email
+      setSelectedRole(null); // Reset vai trò
+      setIsDropdownOpen(false); // Đóng dropdown
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Lỗi khi gán vai trò";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRemoveAssignment = (): void => {
-    if (!assignmentToRemove) return;
-    setUserRoles(
-      userRoles.filter(
-        (ur) => ur.user_role_id !== assignmentToRemove.user_role_id
-      )
-    );
-    setIsRemoveAssignmentModalOpen(false);
-    setAssignmentToRemove(null);
+  const handleRemoveRole = async (userRoleId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetchWithRetry(`/api/user-roles/${userRoleId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Không thể xóa phân quyền");
+      }
+
+      toast.success("Xóa phân quyền thành công");
+      setUserRoles(userRoles.filter((ur) => ur.user_role_id !== userRoleId));
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Lỗi khi xóa phân quyền";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isLoading && !error) {
+    return <div className="text-center">Đang tải...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">{error}</div>;
+  }
 
   return (
-    <div>
-      <div className="mb-6 flex flex-col md:flex-row justify-between gap-4">
-        <div className="relative w-full md:w-96">
-          <label className="input">
-            <svg
-              className="h-[1em] opacity-50"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-            >
-              <g
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                strokeWidth="2.5"
-                fill="none"
-                stroke="currentColor"
-              >
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.3-4.3"></path>
-              </g>
-            </svg>
-            <input
-              type="text"
-              placeholder="Tìm kiếm nhân viên hoặc vai trò..."
-              value={searchUserTerm}
-              onChange={(e) => setSearchUserTerm(e.target.value)}
-            />
+    <div className="p-6">
+      <h2 className="text-2xl font-bold mb-4">Phân quyền người dùng</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="relative" ref={dropdownRef}>
+          <label className="block mb-2 font-semibold">
+            Nhập email nhân viên:
           </label>
+          <input
+            type="email"
+            className="input input-bordered w-full"
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+            placeholder="Nhập email nhân viên"
+            disabled={isLoading}
+            autoComplete="off"
+          />
+          {isDropdownOpen && (
+            <ul className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              {filteredEmployees.length > 0
+                ? filteredEmployees.map((employee) => (
+                    <li
+                      key={employee.employee_id}
+                      className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSelectEmployee(employee)}
+                    >
+                      {employee.full_name} ({employee.email || "Không có email"}
+                      )
+                    </li>
+                  ))
+                : emailInput.trim() && (
+                    <li className="px-4 py-2 text-gray-500">
+                      Không tìm thấy nhân viên
+                    </li>
+                  )}
+            </ul>
+          )}
         </div>
-        <button
-          onClick={handleAssignRole}
-          className="btn btn-primary flex items-center gap-2"
-        >
-          <UserPlus className="w-4 h-4" /> Gán vai trò
-        </button>
+        <div>
+          <label className="block mb-2 font-semibold">Chọn vai trò:</label>
+          <select
+            className="select select-bordered w-full"
+            value={selectedRole || ""}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            disabled={isLoading}
+          >
+            <option value="" disabled>
+              Chọn vai trò
+            </option>
+            {roles.map((role) => (
+              <option key={role.role_id} value={role.role_id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      {/* Bảng phân quyền */}
-      <div className="overflow-x-auto bg-base-100 rounded-lg shadow">
-        <table className="table w-full">
-          <thead>
-            <tr>
-              <th className="w-16">STT</th>
-              <th>Nhân viên</th>
-              <th>Phòng ban</th>
-              <th>Chức vụ</th>
-              <th>Vai trò</th>
-              <th className="w-24">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUserRoles.length > 0 ? (
-              filteredUserRoles.map((assignment, index) => {
-                const employee = employees.find(
-                  (e) => e.employee_id === assignment.employee_id
-                );
-                return (
-                  <tr key={assignment.user_role_id} className="hover">
-                    <td>{index + 1}</td>
-                    <td>
-                      <div>
-                        <div className="font-medium">
-                          {assignment.employee_name}
-                        </div>
-                        <div className="text-sm opacity-70">
-                          {employee?.email || ""}
-                        </div>
-                      </div>
-                    </td>
-                    <td>{employee?.department_name || ""}</td>
-                    <td>{employee?.position_name || ""}</td>
-                    <td>
-                      <div className="badge badge-primary">
-                        {assignment.role_name}
-                      </div>
-                    </td>
+      <button
+        className="btn btn-primary mt-4"
+        onClick={handleAssignRole}
+        disabled={isLoading || !selectedEmployeeId || !selectedRole}
+      >
+        Gán vai trò
+      </button>
+
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold mb-4">Danh sách phân quyền</h3>
+        {userRoles.length === 0 ? (
+          <p className="text-center">Chưa có phân quyền nào.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table w-full">
+              <thead>
+                <tr>
+                  <th>Nhân viên</th>
+                  <th>Vai trò</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userRoles.map((userRole) => (
+                  <tr key={userRole.user_role_id}>
+                    <td>{userRole.employee_name}</td>
+                    <td>{userRole.role_name}</td>
                     <td>
                       <button
-                        className="btn btn-sm btn-error btn-outline"
-                        onClick={() =>
-                          handleRemoveAssignmentConfirmation(assignment)
-                        }
+                        className="btn btn-error btn-sm"
+                        onClick={() => handleRemoveRole(userRole.user_role_id)}
+                        disabled={isLoading}
                       >
-                        Hủy
+                        Xóa
                       </button>
                     </td>
                   </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={6} className="text-center py-4">
-                  Không tìm thấy phân quyền nào
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-      {/* Phân trang */}
-      <div className="mt-4 flex justify-center">
-        <div className="join">
-          <button className="join-item btn btn-sm">«</button>
-          <button className="join-item btn btn-sm btn-active">1</button>
-          <button className="join-item btn btn-sm">2</button>
-          <button className="join-item btn btn-sm">3</button>
-          <button className="join-item btn btn-sm">»</button>
-        </div>
-      </div>
-      {/* Modals */}
-      <AssignRoleModal
-        isOpen={isAssignRoleModalOpen}
-        employees={employees}
-        roles={roles}
-        selectedEmployee={selectedEmployee}
-        selectedRole={selectedRole}
-        setSelectedEmployee={setSelectedEmployee}
-        setSelectedRole={setSelectedRole}
-        onClose={() => setIsAssignRoleModalOpen(false)}
-        onSave={handleSaveAssignment}
-      />
-      <RemoveAssignmentModal
-        isOpen={isRemoveAssignmentModalOpen}
-        assignmentToRemove={assignmentToRemove}
-        onClose={() => setIsRemoveAssignmentModalOpen(false)}
-        onRemove={handleRemoveAssignment}
-      />
     </div>
   );
 };

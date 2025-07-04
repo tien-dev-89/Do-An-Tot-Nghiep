@@ -14,9 +14,6 @@ CREATE TYPE "LeaveStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE "PayrollStatus" AS ENUM ('PAID', 'UNPAID');
 
 -- CreateEnum
-CREATE TYPE "RoleName" AS ENUM ('ADMIN', 'HR', 'MANAGER', 'EMPLOYEE');
-
--- CreateEnum
 CREATE TYPE "NotificationType" AS ENUM ('PERSONAL', 'INTERNAL', 'SYSTEM');
 
 -- CreateEnum
@@ -28,14 +25,14 @@ CREATE TABLE "Employees" (
     "full_name" TEXT NOT NULL,
     "avatar_url" TEXT,
     "email" TEXT NOT NULL,
-    "phone_number" TEXT,
+    "phone_number" VARCHAR(15),
     "birth_date" TIMESTAMP(3),
     "gender" "Gender",
     "address" TEXT,
     "department_id" TEXT,
     "position_id" TEXT,
     "employment_status" "EmploymentStatus" NOT NULL,
-    "join_date" TIMESTAMP(3) NOT NULL,
+    "join_date" TIMESTAMP(3),
     "leave_date" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -48,6 +45,8 @@ CREATE TABLE "Departments" (
     "department_id" TEXT NOT NULL,
     "manager_id" TEXT,
     "name" TEXT NOT NULL,
+    "email" TEXT,
+    "phone_number" VARCHAR(15),
     "description" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -118,7 +117,7 @@ CREATE TABLE "Payrolls" (
 -- CreateTable
 CREATE TABLE "Roles" (
     "role_id" TEXT NOT NULL,
-    "name" "RoleName" NOT NULL,
+    "name" TEXT NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -127,9 +126,19 @@ CREATE TABLE "Roles" (
 );
 
 -- CreateTable
+CREATE TABLE "RolePermissions" (
+    "permission_id" TEXT NOT NULL,
+    "role_id" TEXT NOT NULL,
+    "resource" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+
+    CONSTRAINT "RolePermissions_pkey" PRIMARY KEY ("permission_id")
+);
+
+-- CreateTable
 CREATE TABLE "UserRoles" (
     "user_role_id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "employee_id" TEXT NOT NULL,
     "role_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -168,8 +177,10 @@ CREATE TABLE "Users" (
     "user_id" TEXT NOT NULL,
     "employee_id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "must_change_password" BOOLEAN NOT NULL DEFAULT true,
     "last_login_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -177,14 +188,51 @@ CREATE TABLE "Users" (
     CONSTRAINT "Users_pkey" PRIMARY KEY ("user_id")
 );
 
+-- CreateTable
+CREATE TABLE "LoginLogs" (
+    "log_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "username" TEXT NOT NULL,
+    "activity" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
+    "ip_address" TEXT,
+    "user_agent" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "LoginLogs_pkey" PRIMARY KEY ("log_id")
+);
+
+-- CreateTable
+CREATE TABLE "PasswordResetToken" (
+    "token_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PasswordResetToken_pkey" PRIMARY KEY ("token_id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Employees_email_key" ON "Employees"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Roles_name_key" ON "Roles"("name");
+
+-- CreateIndex
+CREATE INDEX "RolePermissions_role_id_idx" ON "RolePermissions"("role_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Users_employee_id_key" ON "Users"("employee_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Users_username_key" ON "Users"("username");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Users_email_key" ON "Users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PasswordResetToken_token_key" ON "PasswordResetToken"("token");
 
 -- AddForeignKey
 ALTER TABLE "Employees" ADD CONSTRAINT "Employees_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "Departments"("department_id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -196,25 +244,34 @@ ALTER TABLE "Employees" ADD CONSTRAINT "Employees_position_id_fkey" FOREIGN KEY 
 ALTER TABLE "Departments" ADD CONSTRAINT "Departments_manager_id_fkey" FOREIGN KEY ("manager_id") REFERENCES "Employees"("employee_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AttendanceRecords" ADD CONSTRAINT "AttendanceRecords_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AttendanceRecords" ADD CONSTRAINT "AttendanceRecords_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "LeaveRequests" ADD CONSTRAINT "LeaveRequests_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "LeaveRequests" ADD CONSTRAINT "LeaveRequests_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "LeaveRequests" ADD CONSTRAINT "LeaveRequests_approver_id_fkey" FOREIGN KEY ("approver_id") REFERENCES "Employees"("employee_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Payrolls" ADD CONSTRAINT "Payrolls_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Payrolls" ADD CONSTRAINT "Payrolls_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UserRoles" ADD CONSTRAINT "UserRoles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "Users"("user_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "RolePermissions" ADD CONSTRAINT "RolePermissions_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "Roles"("role_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UserRoles" ADD CONSTRAINT "UserRoles_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "Roles"("role_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "UserRoles" ADD CONSTRAINT "UserRoles_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Notifications" ADD CONSTRAINT "Notifications_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "UserRoles" ADD CONSTRAINT "UserRoles_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "Roles"("role_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Users" ADD CONSTRAINT "Users_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Notifications" ADD CONSTRAINT "Notifications_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Users" ADD CONSTRAINT "Users_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "Employees"("employee_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LoginLogs" ADD CONSTRAINT "LoginLogs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "Users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PasswordResetToken" ADD CONSTRAINT "PasswordResetToken_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "Users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;

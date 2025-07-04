@@ -10,7 +10,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
-import { Employee, Department } from "@/types/employee";
+import { Employee, Department, RawEmployee } from "@/types/employee";
 
 const getDepartmentColor = (id: string) => {
   const colors = [
@@ -25,52 +25,107 @@ const getDepartmentColor = (id: string) => {
 const Departments: React.FC = () => {
   const router = useRouter();
   const [departments, setDepartments] = useState<Department[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [departmentToDelete, setDepartmentToDelete] =
     useState<Department | null>(null);
   const [success, setSuccess] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [totalDepartments, setTotalDepartments] = useState<number>(0); // State cho tổng quan
+  const [totalEmployees, setTotalEmployees] = useState<number>(0); // State cho tổng quan
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const deptRes = await fetch("/api/departments");
-        const deptData = await deptRes.json();
-        if (deptRes.ok && Array.isArray(deptData)) {
-          setDepartments(deptData);
-        } else {
-          toast.error("Lỗi khi lấy danh sách phòng ban");
-          setDepartments([]);
+        const token = localStorage.getItem("token");
+        console.log("Token:", token); // Debug token
+        if (!token) {
+          throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
         }
 
-        const empRes = await fetch("/api/employees");
+        // Lấy danh sách phòng ban
+        const deptRes = await fetch("/api/departments", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `x ${token}`,
+          },
+        });
+        const deptData = await deptRes.json();
+        if (deptRes.ok && Array.isArray(deptData.departments)) {
+          setDepartments(deptData.departments);
+          setTotalDepartments(deptData.total || deptData.departments.length); // Lấy total từ API
+        } else {
+          if (deptRes.status === 401) {
+            localStorage.removeItem("token");
+            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+            router.push("/login");
+            return;
+          }
+          toast.error(deptData.error || "Lỗi khi lấy danh sách phòng ban");
+          setDepartments([]);
+          setTotalDepartments(0);
+        }
+
+        // Lấy danh sách nhân viên
+        const empRes = await fetch("/api/employees", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `x ${token}`,
+          },
+        });
         const empData = await empRes.json();
         if (empRes.ok && empData.employees) {
-          const formattedEmployees = empData.employees.map((emp: unknown) => {
-            const employee = emp as Employee;
-            return {
-              ...employee,
-              phone: employee.phone_number || "",
+          const formattedEmployees = empData.employees.map(
+            (emp: RawEmployee) => ({
+              ...emp,
+              phone: emp.phone_number || "",
               gender:
-                employee.gender === "MALE"
+                emp.gender === "MALE"
                   ? "Nam"
-                  : employee.gender === "FEMALE"
+                  : emp.gender === "FEMALE"
                   ? "Nữ"
                   : "",
-            };
-          });
+              employment_status:
+                emp.employment_status === "ACTIVE"
+                  ? "Đang làm"
+                  : emp.employment_status === "PROBATION"
+                  ? "Thử việc"
+                  : emp.employment_status === "MATERNITY_LEAVE"
+                  ? "Nghỉ thai sản"
+                  : "Nghỉ việc",
+            })
+          );
           setEmployees(formattedEmployees);
+          setTotalEmployees(
+            empData.totalEmployees ||
+              formattedEmployees.filter(
+                (emp: Employee) => emp.employment_status !== "Nghỉ việc"
+              ).length
+          ); // Lấy từ totalEmployees hoặc fallback
         } else {
-          toast.error("Lỗi khi lấy danh sách nhân viên");
+          if (empRes.status === 401) {
+            localStorage.removeItem("token");
+            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+            router.push("/login");
+            return;
+          }
+          toast.error(empData.error || "Lỗi khi lấy danh sách nhân viên");
           setEmployees([]);
+          setTotalEmployees(0);
         }
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
-        toast.error("Không thể tải dữ liệu");
+        toast.error(
+          error instanceof Error
+            ? error.message || "Không thể tải dữ liệu"
+            : "Không thể tải dữ liệu"
+        );
         setEmployees([]);
         setDepartments([]);
+        setTotalDepartments(0);
+        setTotalEmployees(0);
       } finally {
         setIsLoading(false);
       }
@@ -100,9 +155,17 @@ const Departments: React.FC = () => {
   const handleDeleteDepartment = async () => {
     if (departmentToDelete) {
       try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+        }
+
         const res = await fetch("/api/departments", {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `x ${token}`,
+          },
           body: JSON.stringify({
             department_id: departmentToDelete.department_id,
           }),
@@ -121,10 +184,16 @@ const Departments: React.FC = () => {
           setSuccess("Đã xóa phòng ban thành công");
           setTimeout(() => setSuccess(""), 3000);
         } else {
+          if (res.status === 401) {
+            localStorage.removeItem("token");
+            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+            router.push("/login");
+            return;
+          }
           toast.error(data.error || "Lỗi khi xóa phòng ban");
         }
       } catch (error) {
-        console.error("Lỗi khi xóa phòng ban:", error);
+        console.error("Lỗi khi xóa:", error);
         toast.error("Không thể xóa phòng ban");
       }
     }
@@ -133,11 +202,6 @@ const Departments: React.FC = () => {
   const filteredDepartments = departments.filter((dept) =>
     dept.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const totalDepartments = departments.length;
-  const totalEmployees = employees.filter(
-    (emp) => emp.employment_status !== "Nghỉ việc"
-  ).length;
 
   if (isLoading) {
     return (

@@ -12,6 +12,13 @@ services:
       - db
     volumes:
       - .:/app
+  cron:
+    build: .
+    command: node dist/scripts/cron.js
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - db
   db:
     image: postgres:15
     ports:
@@ -22,5 +29,18 @@ services:
       - POSTGRES_DB=staffly
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  email-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npx ts-node src/workers/email-worker.ts
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      - .:/app
+
 volumes:
   postgres_data:

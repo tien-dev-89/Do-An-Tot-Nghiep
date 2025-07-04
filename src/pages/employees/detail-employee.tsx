@@ -60,8 +60,8 @@ export default function DetailEmployee({ item, drawerId, fetchTasks }: Props) {
 
   useEffect(() => {
     if (item) {
-      console.log("Item received:", item); // Debug giá trị item
-      console.log("Raw gender:", item.gender); // Debug gender
+      console.log("Item received:", item);
+      console.log("Raw gender:", item.gender);
 
       const validStatuses: EmploymentStatus[] = [
         "Đang làm",
@@ -75,22 +75,12 @@ export default function DetailEmployee({ item, drawerId, fetchTasks }: Props) {
         ? item.employment_status
         : "Đang làm";
 
-      // Xử lý gender với kiểm tra an toàn
-      const gender: Gender =
-        item.gender === "MALE"
-          ? "Nam"
-          : item.gender === "FEMALE"
-          ? "Nữ"
-          : "Nam"; // Mặc định "Nam" nếu không xác định
-
-      console.log("Processed gender:", gender); // Debug gender đã xử lý
-
       setFormData({
         ...item,
         employment_status: employment_status as EmploymentStatus,
         phone_number: item.phone_number || "",
         birth_date: formatDateForInput(item.birth_date),
-        gender: gender,
+        gender: item.gender, // Đã là "Nam" hoặc "Nữ" từ Index.tsx
         address: item.address || "",
         department_id: item.department_id || "",
         position_id: item.position_id || "",
@@ -110,16 +100,40 @@ export default function DetailEmployee({ item, drawerId, fetchTasks }: Props) {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch("/api/departments", { method: "GET" });
+      const token = localStorage.getItem("token");
+      console.log("Token:", token); // Debug token
+      if (!token) {
+        throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+      }
+
+      console.log("Gửi request tới /api/departments...");
+      const response = await fetch("/api/departments", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `x ${token}`,
+        },
+      });
+
+      console.log("Mã trạng thái HTTP:", response.status); // Debug status
       if (!response.ok) {
-        const errorData = await response.text();
+        const errorData = await response.json(); // Sử dụng json() thay vì text()
         console.error("Phản hồi lỗi từ /api/departments:", errorData);
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+          window.location.href = "/login";
+          return;
+        }
         throw new Error(
           `Lỗi khi lấy danh sách phòng ban: ${response.status} ${response.statusText}`
         );
       }
+
       const data = await response.json();
-      setDepartments(data);
+      console.log("API GET /api/departments response:", data); // Debug response
+      setDepartments(data.departments || []); // Lấy data.departments
+      console.log("Departments state updated:", data.departments || []); // Debug state
     } catch (error) {
       console.error("Lỗi khi lấy danh sách phòng ban:", error);
       const errorMessage =
@@ -131,14 +145,33 @@ export default function DetailEmployee({ item, drawerId, fetchTasks }: Props) {
 
   const fetchPositions = async () => {
     try {
-      const response = await fetch("/api/positions", { method: "GET" });
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+      }
+
+      const response = await fetch("/api/positions", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `x ${token}`,
+        },
+      });
+
       if (!response.ok) {
         const errorData = await response.text();
         console.error("Phản hồi lỗi từ /api/positions:", errorData);
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+          window.location.href = "/login"; // Chuyển hướng về login
+          return;
+        }
         throw new Error(
           `Lỗi khi lấy danh sách vị trí: ${response.status} ${response.statusText}`
         );
       }
+
       const data = await response.json();
       setPositions(data);
     } catch (error) {
@@ -236,15 +269,23 @@ export default function DetailEmployee({ item, drawerId, fetchTasks }: Props) {
 
     setIsLoading(true);
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+      }
+
       const response = await fetch(`/api/employees/${formData.employee_id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `x ${token}`,
+        },
         body: JSON.stringify({
           full_name: formData.full_name,
           email: formData.email,
           phone_number: formData.phone_number || null,
           birth_date: formData.birth_date || null,
-          gender: formData.gender === "Nam" ? "MALE" : "FEMALE", // Ánh xạ ngược khi gửi API
+          gender: formData.gender, // Gửi "Nam" hoặc "Nữ" vì API đã ánh xạ
           address: formData.address || null,
           department_id: formData.department_id || null,
           position_id: formData.position_id || null,
@@ -258,9 +299,15 @@ export default function DetailEmployee({ item, drawerId, fetchTasks }: Props) {
       const data = await response.json();
       if (response.ok) {
         toast.success("Cập nhật nhân viên thành công");
-        await fetchTasks(1);
-        (document.getElementById(drawerId) as HTMLInputElement).checked = false;
+        await fetchTasks(1); // Cập nhật bảng
+        (document.getElementById(drawerId) as HTMLInputElement).checked = false; // Đóng drawer
       } else {
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+          window.location.href = "/login";
+          return;
+        }
         const errorMessage =
           data.error ||
           `Lỗi khi cập nhật nhân viên: ${response.status} ${response.statusText}`;
@@ -408,12 +455,18 @@ export default function DetailEmployee({ item, drawerId, fetchTasks }: Props) {
               disabled={departments.length === 0}
             >
               <option value="">Chọn phòng ban</option>
-              {departments.map((dep) => (
-                <option key={dep.department_id} value={dep.department_id}>
-                  {dep.name}
-                </option>
-              ))}
+              {Array.isArray(departments) &&
+                departments.map((dep) => (
+                  <option key={dep.department_id} value={dep.department_id}>
+                    {dep.name}
+                  </option>
+                ))}
             </select>
+            {departments.length === 0 && (
+              <p className="text-sm text-error mt-1">
+                Không có phòng ban nào được tải
+              </p>
+            )}
           </div>
           <div className="grid">
             <label>Vị trí công việc</label>

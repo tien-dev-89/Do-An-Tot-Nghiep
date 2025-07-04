@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         )],
       }));
 
-      console.log('Positions fetched:', response);
+      // console.log('Positions fetched:', response);
       return res.status(200).json(response);
     } catch (error) {
       console.error('Lỗi khi lấy danh sách chức vụ:', error);
@@ -134,7 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         department_ids: assignedDepartmentIds,
       };
 
-      console.log('Position created:', response);
+      // console.log('Position created:', response);
       return res.status(201).json(response);
     } catch (error) {
       console.error('Lỗi khi tạo chức vụ:', error);

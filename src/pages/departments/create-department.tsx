@@ -2,23 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { toast } from "react-toastify";
-import { Department, EmployeeOption } from "@/types/employee";
-
-// Type guard để kiểm tra EmployeeOption
-const isEmployeeOptionArray = (data: unknown): data is EmployeeOption[] => {
-  return (
-    Array.isArray(data) &&
-    data.every(
-      (item) =>
-        typeof item === "object" &&
-        item !== null &&
-        "employee_id" in item &&
-        typeof item.employee_id === "string" &&
-        "full_name" in item &&
-        typeof item.full_name === "string"
-    )
-  );
-};
+import { Department } from "@/types/employee";
 
 const CreateDepartment: React.FC = () => {
   const router = useRouter();
@@ -30,33 +14,71 @@ const CreateDepartment: React.FC = () => {
     manager_name: undefined,
     description: "",
   });
-  const [availableEmployees, setAvailableEmployees] = useState<
-    EmployeeOption[]
-  >([]);
+  const [managerEmail, setManagerEmail] = useState<string>("");
+  const [managerName, setManagerName] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
 
-  // Lấy danh sách nhân viên có thể làm trưởng phòng
-  useEffect(() => {
-    const fetchAvailableEmployees = async () => {
-      try {
-        const res = await fetch("/api/employees/available");
-        const data = await res.json();
-        if (res.ok && isEmployeeOptionArray(data)) {
-          setAvailableEmployees(data);
-        } else {
-          setError(data.error || "Lỗi khi lấy danh sách nhân viên");
-          toast.error(data.error || "Lỗi khi lấy danh sách nhân viên");
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error) {
-        setError("Lỗi khi tải danh sách nhân viên");
-        toast.error("Lỗi khi tải danh sách nhân viên");
+  // Kiểm tra email để lấy manager_id
+  const validateEmail = async (email: string) => {
+    if (!email.trim()) {
+      setEmailError("");
+      setManagerName(null);
+      setNewDepartment({
+        ...newDepartment,
+        manager_id: null,
+        manager_name: "",
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
       }
-    };
-    fetchAvailableEmployees();
-  }, []);
+
+      const res = await fetch(
+        `/api/employees/by-email?email=${encodeURIComponent(email)}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `x ${token}`,
+          },
+        }
+      );
+      const data = await res.json();
+
+      if (res.ok) {
+        setEmailError("");
+        setManagerName(data.full_name);
+        setNewDepartment({
+          ...newDepartment,
+          manager_id: data.employee_id,
+          manager_name: data.full_name,
+        });
+      } else {
+        setEmailError(data.error || "Không tìm thấy nhân viên với email này");
+        setManagerName(null);
+        setNewDepartment({
+          ...newDepartment,
+          manager_id: null,
+          manager_name: "",
+        });
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      setEmailError("Lỗi khi kiểm tra email");
+      setManagerName(null);
+      setNewDepartment({
+        ...newDepartment,
+        manager_id: null,
+        manager_name: "",
+      });
+    }
+  };
 
   const handleCreateDepartment = async () => {
     if (!newDepartment.name.trim()) {
@@ -66,16 +88,29 @@ const CreateDepartment: React.FC = () => {
       return;
     }
 
+    if (managerEmail && emailError) {
+      toast.error(emailError);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError("");
       setSuccess("");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+      }
+
       const res = await fetch("/api/departments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `x ${token}`,
+        },
         body: JSON.stringify({
           name: newDepartment.name,
-          description: newDepartment.description,
+          description: newDepartment.description || null,
           manager_id: newDepartment.manager_id,
         }),
       });
@@ -174,26 +209,44 @@ const CreateDepartment: React.FC = () => {
           </div>
           <div className="grid gap-2 form-control pb-6">
             <label className="label">
-              <span className="label-text">Trưởng phòng</span>
+              <span className="label-text">Email trưởng phòng</span>
             </label>
-            <select
-              className="select select-bordered"
-              value={newDepartment.manager_id || ""}
-              onChange={(e) =>
-                setNewDepartment({
-                  ...newDepartment,
-                  manager_id: e.target.value || null,
-                })
-              }
-              disabled={isLoading}
-            >
-              <option value="">Chọn trưởng phòng (tùy chọn)</option>
-              {availableEmployees.map((emp) => (
-                <option key={emp.employee_id} value={emp.employee_id}>
-                  {emp.full_name} (ID: {emp.employee_id})
-                </option>
-              ))}
-            </select>
+            <label className="input validator flex items-center gap-2">
+              <svg
+                className="h-[1em] opacity-50"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <g
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  strokeWidth="2.5"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                </g>
+              </svg>
+              <input
+                type="email"
+                placeholder="mail@site.com"
+                value={managerEmail}
+                onChange={(e) => {
+                  setManagerEmail(e.target.value);
+                  validateEmail(e.target.value);
+                }}
+                disabled={isLoading}
+              />
+            </label>
+            {emailError && (
+              <div className="validator-hint text-error">{emailError}</div>
+            )}
+            {managerName && !emailError && (
+              <p className="text-sm text-success mt-1">
+                Trưởng phòng: {managerName}
+              </p>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <button

@@ -1,76 +1,62 @@
-import React, { useState } from "react";
-import { Filter, ArrowUpDown, RefreshCw } from "lucide-react";
-
-interface User {
-  user_id: string;
-  last_login_at: string;
-}
+import React, { useState, useEffect } from "react";
+import { Filter, RefreshCw } from "lucide-react";
 
 interface LoginLog {
   log_id: string;
   user_id: string;
   username: string;
-  login_time: string;
-  status: "success" | "failed";
-  failure_reason?: string;
+  activity: string;
+  status: string;
+  ip_address: string;
+  user_agent: string;
+  created_at: string;
 }
 
-interface LoginLogProps {
-  loginLogs: LoginLog[];
-  users: User[];
-}
-
-const LoginLog: React.FC<LoginLogProps> = ({ loginLogs, users }) => {
+const LoginLog: React.FC = () => {
+  const [logs, setLogs] = useState<LoginLog[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loginStatusFilter, setLoginStatusFilter] = useState<
+  const [statusFilter, setStatusFilter] = useState<
     "all" | "success" | "failed"
   >("all");
   const [timeFilter, setTimeFilter] = useState<
-    "all" | "today" | "7days" | "30days"
+    "all" | "today" | "week" | "month"
   >("all");
+  const [loading, setLoading] = useState(false);
 
-  // Format date and time
-  const formatDateTime = (dateTimeStr: string) => {
-    const date = new Date(dateTimeStr);
-    return new Intl.DateTimeFormat("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const query = new URLSearchParams({
+        ...(searchTerm && { username: searchTerm }),
+        ...(statusFilter !== "all" && { status: statusFilter }),
+        ...(timeFilter !== "all" && { timeRange: timeFilter }),
+      }).toString();
+
+      const response = await fetch(
+        `/api/account/account-management/login-logs?${query}`
+      );
+      const result = await response.json();
+      if (result.success) {
+        setLogs(result.data);
+      } else {
+        console.error("Lỗi khi lấy nhật ký đăng nhập:", result.error);
+      }
+    } catch (error: unknown) {
+      console.error("Lỗi khi lấy nhật ký đăng nhập:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Lọc nhật ký đăng nhập
-  const filteredLoginLogs = loginLogs.filter((log) => {
-    const searchMatch = log.username
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-
-    const statusMatch =
-      loginStatusFilter === "all" ||
-      (loginStatusFilter === "success" && log.status === "success") ||
-      (loginStatusFilter === "failed" && log.status === "failed");
-
-    const now = new Date();
-    const logDate = new Date(log.login_time);
-    const daysDiff = Math.floor(
-      (now.getTime() - logDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    const timeMatch =
-      timeFilter === "all" ||
-      (timeFilter === "today" && daysDiff < 1) ||
-      (timeFilter === "7days" && daysDiff < 7) ||
-      (timeFilter === "30days" && daysDiff < 30);
-
-    return searchMatch && statusMatch && timeMatch;
-  });
+  useEffect(() => {
+    fetchLogs(); // Gọi lần đầu
+    const interval = setInterval(fetchLogs, 5000); // Gọi lại mỗi 5 giây
+    return () => clearInterval(interval); // Dọn dẹp khi component unmount
+  }, [searchTerm, statusFilter, timeFilter]);
 
   return (
-    <>
-      {/* Search and filter bar */}
-      <div className="p-4 border-b border-base-300 flex flex-wrap gap-4 items-center">
+    <div className="p-4">
+      <div className="flex flex-wrap gap-4 mb-4 items-center">
         <div className="join flex-1">
           <label className="input">
             <svg
@@ -92,13 +78,12 @@ const LoginLog: React.FC<LoginLogProps> = ({ loginLogs, users }) => {
             <input
               required
               type="text"
-              placeholder="Tìm kiếm theo tên đăng nhập..."
+              placeholder="Tìm kiếm theo username..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </label>
         </div>
-
         <div className="dropdown dropdown-end">
           <label tabIndex={0} className="btn btn-outline gap-1">
             <Filter className="w-4 h-4" />
@@ -111,29 +96,37 @@ const LoginLog: React.FC<LoginLogProps> = ({ loginLogs, users }) => {
             <li className="menu-title">Trạng thái</li>
             <li>
               <a
-                onClick={() => setLoginStatusFilter("all")}
-                className={loginStatusFilter === "all" ? "active" : ""}
+                onClick={() => setStatusFilter("all")}
+                className={statusFilter === "all" ? "active" : ""}
               >
                 Tất cả
               </a>
             </li>
             <li>
               <a
-                onClick={() => setLoginStatusFilter("success")}
-                className={loginStatusFilter === "success" ? "active" : ""}
+                onClick={() => setStatusFilter("success")}
+                className={statusFilter === "success" ? "active" : ""}
               >
                 Thành công
               </a>
             </li>
             <li>
               <a
-                onClick={() => setLoginStatusFilter("failed")}
-                className={loginStatusFilter === "failed" ? "active" : ""}
+                onClick={() => setStatusFilter("failed")}
+                className={statusFilter === "failed" ? "active" : ""}
               >
                 Thất bại
               </a>
             </li>
             <li className="menu-title pt-2">Thời gian</li>
+            <li>
+              <a
+                onClick={() => setTimeFilter("all")}
+                className={timeFilter === "all" ? "active" : ""}
+              >
+                Tất cả
+              </a>
+            </li>
             <li>
               <a
                 onClick={() => setTimeFilter("today")}
@@ -144,26 +137,18 @@ const LoginLog: React.FC<LoginLogProps> = ({ loginLogs, users }) => {
             </li>
             <li>
               <a
-                onClick={() => setTimeFilter("7days")}
-                className={timeFilter === "7days" ? "active" : ""}
+                onClick={() => setTimeFilter("week")}
+                className={timeFilter === "week" ? "active" : ""}
               >
-                7 ngày qua
+                Tuần này
               </a>
             </li>
             <li>
               <a
-                onClick={() => setTimeFilter("30days")}
-                className={timeFilter === "30days" ? "active" : ""}
+                onClick={() => setTimeFilter("month")}
+                className={timeFilter === "month" ? "active" : ""}
               >
-                30 ngày qua
-              </a>
-            </li>
-            <li>
-              <a
-                onClick={() => setTimeFilter("all")}
-                className={timeFilter === "all" ? "active" : ""}
-              >
-                Tất cả
+                Tháng này
               </a>
             </li>
           </ul>
@@ -172,7 +157,7 @@ const LoginLog: React.FC<LoginLogProps> = ({ loginLogs, users }) => {
           className="btn btn-outline"
           onClick={() => {
             setSearchTerm("");
-            setLoginStatusFilter("all");
+            setStatusFilter("all");
             setTimeFilter("all");
           }}
         >
@@ -181,89 +166,49 @@ const LoginLog: React.FC<LoginLogProps> = ({ loginLogs, users }) => {
         </button>
       </div>
 
-      {/* Table content */}
-      <div className="overflow-x-auto w-full">
-        <table className="table table-zebra w-full">
-          <thead>
-            <tr>
-              <th className="cursor-pointer">
-                <div className="flex items-center gap-1">
-                  Tên đăng nhập
-                  <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th className="cursor-pointer">
-                <div className="flex items-center gap-1">
-                  Thời gian
-                  <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th className="cursor-pointer">
-                <div className="flex items-center gap-1">
-                  Lần đăng nhập gần nhất
-                  <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th>Trạng thái</th>
-              <th>Chi tiết</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLoginLogs.map((log) => (
-              <tr key={log.log_id}>
-                <td>
-                  <div className="font-medium">{log.username}</div>
-                </td>
-                <td>
-                  <div className="flex flex-col">
-                    <span className="text-sm">
-                      {formatDateTime(log.login_time)}
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  {formatDateTime(
-                    users.find((u) => u.user_id === log.user_id)
-                      ?.last_login_at || log.login_time
-                  )}
-                </td>
-                <td>
-                  <div className="flex items-center gap-1">
-                    {log.status === "success" ? (
-                      <span className="badge badge-success">Thành công</span>
-                    ) : (
-                      <span className="badge badge-error">Thất bại</span>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  {log.status === "failed" && log.failure_reason && (
-                    <span className="text-sm text-error">
-                      {log.failure_reason}
-                    </span>
-                  )}
-                </td>
+      <div className="overflow-x-auto">
+        {loading ? (
+          <div className="text-center p-4">Đang tải...</div>
+        ) : (
+          <table className="table table-zebra w-full">
+            <thead>
+              <tr>
+                <th>STT</th>
+                <th>Tên đăng nhập</th>
+                <th>Hoạt động</th>
+                <th>Trạng thái</th>
+                <th>Địa chỉ IP</th>
+                <th>Trình duyệt</th>
+                <th>Thời gian</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {logs.map((log, index) => (
+                <tr key={log.log_id}>
+                  <td>{index + 1}</td>
+                  <td>{log.username}</td>
+                  <td>{log.activity}</td>
+                  <td>
+                    <span
+                      className={`badge ${
+                        log.status === "Thành công"
+                          ? "badge-success"
+                          : "badge-error"
+                      } badge-sm`}
+                    >
+                      {log.status}
+                    </span>
+                  </td>
+                  <td>{log.ip_address}</td>
+                  <td className="whitespace-pre-line">{log.user_agent}</td>
+                  <td>{new Date(log.created_at).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
-
-      {/* Pagination */}
-      <div className="flex justify-between items-center p-4 border-t border-base-300">
-        <div className="text-sm">
-          Hiển thị{" "}
-          <span className="font-medium">1-{filteredLoginLogs.length}</span>{" "}
-          trong tổng số{" "}
-          <span className="font-medium">{filteredLoginLogs.length}</span> mục
-        </div>
-        <div className="join">
-          <button className="join-item btn btn-sm">«</button>
-          <button className="join-item btn btn-sm btn-active">1</button>
-          <button className="join-item btn btn-sm">»</button>
-        </div>
-      </div>
-    </>
+    </div>
   );
 };
 

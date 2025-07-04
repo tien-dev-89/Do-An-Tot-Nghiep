@@ -6,8 +6,8 @@ import {
   Bell,
   CalendarCheck,
   DollarSign,
+  FileText,
   House,
-  LayoutDashboard,
   Settings,
   User,
 } from "lucide-react";
@@ -20,8 +20,6 @@ const NavbarLeft: React.FC = () => {
   const [isSalaryOpen, setIsSalaryOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isAccount, setIsAccount] = useState(false);
-  const [isUtility, setIsUtility] = useState(false);
 
   // Tự động mở collapse khi pathname thay đổi
   useEffect(() => {
@@ -45,15 +43,6 @@ const NavbarLeft: React.FC = () => {
       pathname === "/announcement/send-notifications" ||
         pathname === "/announcement/inbox"
     );
-    setIsAccount(
-      pathname === "/account/account-management" ||
-        pathname === "/account/login-permissions"
-    );
-    setIsUtility(
-      pathname === "/utility/change-password" ||
-        pathname === "/utility/timekeeping"
-    );
-    setIsUtility(pathname === "" || pathname === "");
   }, [pathname]);
 
   return (
@@ -310,7 +299,7 @@ const NavbarLeft: React.FC = () => {
           </div>
 
           {/* Tài khoản */}
-          <div className="collapse collapse-arrow rounded-md">
+          {/* <div className="collapse collapse-arrow rounded-md">
             <input
               type="checkbox"
               checked={isAccount}
@@ -339,71 +328,42 @@ const NavbarLeft: React.FC = () => {
                     Quản lý tài khoản
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/account/login-permissions"
-                    className={`p-3 text-sm flex font-medium hover:bg-blue-200 rounded-md transition-colors ${
-                      pathname === "/account/login-permissions"
-                        ? "bg-blue-200"
-                        : ""
-                    }`}
-                    aria-current={
-                      pathname === "/account/login-permissions"
-                        ? "page"
-                        : undefined
-                    }
-                  >
-                    Phân quyền đăng nhập
-                  </Link>
-                </li>
               </ul>
             </div>
+          </div> */}
+          <div
+            className={`p-4 flex font-medium rounded-md hover:bg-blue-300 hover:text-white transition-colors ${
+              pathname === "/account/account-management"
+                ? "bg-blue-400 text-white"
+                : ""
+            }`}
+          >
+            <Link
+              href="/account/account-management"
+              className="flex items-center gap-5"
+              aria-current={
+                pathname === "/account/account-management" ? "page" : undefined
+              }
+            >
+              <Settings className="w-5 h-5" />
+              Tài khoản
+            </Link>
           </div>
-          {/* Tiện ích */}
-          <div className="collapse collapse-arrow rounded-md">
-            <input
-              type="checkbox"
-              checked={isUtility}
-              onChange={() => setIsUtility(!isUtility)}
-            />
-            <label className="collapse-title font-medium flex items-center gap-5 p-4 hover:bg-blue-300 hover:text-white cursor-pointer transition-colors">
-              <LayoutDashboard className="w-5 h-5" />
-              Tiện ích
-            </label>
-            <div className="collapse-content">
-              <ul className="menu menu-sm relative w-[260px]">
-                <li>
-                  <Link
-                    href="/utility/timekeeping"
-                    className={`p-3 text-sm flex font-medium hover:bg-blue-200 rounded-md transition-colors ${
-                      pathname === "/utility/timekeeping" ? "bg-blue-200" : ""
-                    }`}
-                    aria-current={
-                      pathname === "/utility/timekeeping" ? "page" : undefined
-                    }
-                  >
-                    Chấm công
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/utility/change-password"
-                    className={`p-3 text-sm flex font-medium hover:bg-blue-200 rounded-md transition-colors ${
-                      pathname === "/utility/change-password"
-                        ? "bg-blue-200"
-                        : ""
-                    }`}
-                    aria-current={
-                      pathname === "/utility/change-password"
-                        ? "page"
-                        : undefined
-                    }
-                  >
-                    Đổi Mật Khẩu
-                  </Link>
-                </li>
-              </ul>
-            </div>
+
+          {/* Hợp đồng */}
+          <div
+            className={`p-4 flex font-medium rounded-md hover:bg-blue-300 hover:text-white transition-colors ${
+              pathname === "/contract" ? "bg-blue-400 text-white" : ""
+            }`}
+          >
+            <Link
+              href="/contract"
+              className="flex items-center gap-5"
+              aria-current={pathname === "/contract" ? "page" : undefined}
+            >
+              <FileText className="w-5 h-5" />
+              Hợp đồng
+            </Link>
           </div>
         </div>
       </div>

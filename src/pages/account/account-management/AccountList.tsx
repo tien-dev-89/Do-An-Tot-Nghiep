@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   Filter,
@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "react-toastify";
 
 interface User {
   user_id: string;
@@ -43,10 +44,12 @@ interface User {
 }
 
 interface AccountListProps {
-  users: User[];
+  users?: User[];
 }
 
-const AccountList: React.FC<AccountListProps> = ({ users }) => {
+const AccountList: React.FC<AccountListProps> = ({
+  users: initialUsers = [],
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
@@ -54,8 +57,68 @@ const AccountList: React.FC<AccountListProps> = ({ users }) => {
   const [roleFilter, setRoleFilter] = useState<
     "all" | "Admin" | "HR" | "Manager" | "Employee"
   >("all");
+  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Lọc danh sách tài khoản
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch("/api/account/account-management/users");
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error(
+              "Tuyến API /api/account/account-management/users không tồn tại. Vui lòng kiểm tra file src/pages/api/account/account-management/users.ts"
+            );
+          }
+          throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+        }
+        const result = await response.json();
+        if (result.success) {
+          setUsers(result.data as User[]);
+        } else {
+          setError(result.error || "Lỗi khi lấy danh sách tài khoản");
+        }
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Không thể kết nối đến server";
+        setError(errorMessage);
+        console.error("Lỗi khi lấy danh sách tài khoản:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const handleDelete = async (userId: string) => {
+    if (confirm("Bạn có chắc chắn muốn xóa tài khoản này?")) {
+      try {
+        const response = await fetch(
+          `/api/account/account-management/users?id=${userId}`,
+          {
+            method: "DELETE",
+          }
+        );
+        const result = await response.json();
+        if (result.success) {
+          setUsers(users.filter((user) => user.user_id !== userId));
+          toast.success("Xóa tài khoản thành công!");
+        } else {
+          toast.error("Lỗi khi xóa tài khoản: " + result.error);
+        }
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Lỗi khi xóa tài khoản";
+        toast.error("Lỗi khi xóa tài khoản: " + errorMessage);
+      }
+    }
+  };
+
   const filteredUsers = users.filter((user) => {
     const searchMatch =
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -78,7 +141,6 @@ const AccountList: React.FC<AccountListProps> = ({ users }) => {
 
   return (
     <>
-      {/* Search and filter bar */}
       <div className="p-4 border-b border-base-300 flex flex-wrap gap-4 items-center">
         <div className="join flex-1">
           <label className="input">
@@ -197,139 +259,170 @@ const AccountList: React.FC<AccountListProps> = ({ users }) => {
         </button>
       </div>
 
-      {/* Table content */}
       <div className="overflow-x-auto w-full">
-        <table className="table table-zebra w-full">
-          <thead>
-            <tr>
-              <th className="w-12">
-                <label>
-                  <input type="checkbox" className="checkbox checkbox-sm" />
-                </label>
-              </th>
-              <th className="cursor-pointer">
-                <div className="flex items-center gap-1">
-                  Tên người dùng
-                  <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th className="cursor-pointer">
-                <div className="flex items-center gap-1">
-                  Email
-                  <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th>Mật khẩu</th>
-              <th>Phòng ban</th>
-              <th>Chức vụ</th>
-              <th>Vai trò</th>
-              <th>Trạng thái</th>
-              <th className="w-24">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((user) => (
-              <tr key={user.user_id}>
-                <td>
+        {error && (
+          <div className="alert alert-error shadow-lg mb-4">
+            <div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current flex-shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
+        {loading ? (
+          <div className="text-center p-4">Đang tải...</div>
+        ) : (
+          <table className="table table-zebra w-full">
+            <thead>
+              <tr>
+                <th className="w-12">
                   <label>
                     <input type="checkbox" className="checkbox checkbox-sm" />
                   </label>
-                </td>
-                <td>
-                  <div className="flex items-center space-x-3">
-                    <div className="avatar">
-                      <div className="mask mask-squircle w-10 h-10 bg-base-300 flex items-center justify-center">
-                        {user.employee.avatar_url ? (
-                          <Image
-                            src={user.employee.avatar_url}
-                            alt={user.employee.full_name}
-                            width={40}
-                            height={40}
-                            className="rounded-full"
-                          />
-                        ) : (
-                          <span className="text-lg font-semibold">
-                            {user.employee.full_name.charAt(0)}
-                          </span>
-                        )}
+                </th>
+                <th className="cursor-pointer">
+                  <div className="flex items-center gap-1">
+                    Tên người dùng
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
+                </th>
+                <th className="cursor-pointer">
+                  <div className="flex items-center gap-1">
+                    Email
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
+                </th>
+                <th>Mật khẩu</th>
+                <th>Phòng ban</th>
+                <th>Chức vụ</th>
+                <th>Vai trò</th>
+                <th>Trạng thái</th>
+                <th className="w-24">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr key={user.user_id}>
+                  <td>
+                    <label>
+                      <input type="checkbox" className="checkbox checkbox-sm" />
+                    </label>
+                  </td>
+                  <td>
+                    <div className="flex items-center space-x-3">
+                      <div className="avatar">
+                        <div className="mask mask-squircle w-10 h-10 bg-base-300 flex items-center justify-center">
+                          {user.employee.avatar_url ? (
+                            <Image
+                              src={user.employee.avatar_url}
+                              alt={user.employee.full_name}
+                              width={40}
+                              height={40}
+                              className="rounded-full"
+                            />
+                          ) : (
+                            <span className="text-lg font-semibold">
+                              {user.employee.full_name.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-bold">
+                          {user.employee.full_name}
+                        </div>
+                        <div className="text-sm opacity-70">
+                          {user.username}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="font-bold">{user.employee.full_name}</div>
-                      <div className="text-sm opacity-70">{user.username}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>{user.employee.email}</td>
-                <td>
-                  <span className="font-mono text-xs bg-base-200 px-2 py-1 rounded">
-                    {user.password_hash}
-                  </span>
-                </td>
-                <td>{user.employee.department.name}</td>
-                <td>{user.employee.position.name}</td>
-                <td>
-                  <div className="flex flex-wrap gap-1">
-                    {user.roles.map((role, idx) => (
-                      <span
-                        key={idx}
-                        className={`badge ${
-                          role.name === "Admin"
-                            ? "badge-primary"
-                            : role.name === "HR"
-                            ? "badge-secondary"
-                            : role.name === "Manager"
-                            ? "badge-accent"
-                            : "badge-ghost"
-                        } badge-sm`}
-                      >
-                        {role.name}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="p-0">
-                  <div className="flex items-center gap-1">
-                    {user.is_active ? (
-                      <>
-                        <ShieldCheck className="w-4 h-4 text-success" />
-                        <span className="badge badge-success badge-sm">
-                          Hoạt động
+                  </td>
+                  <td>{user.employee.email}</td>
+                  <td>
+                    <span className="font-mono text-xs bg-base-200 px-2 py-1 rounded">
+                      ●●●●●●
+                    </span>
+                  </td>
+                  <td>{user.employee.department.name}</td>
+                  <td>{user.employee.position.name}</td>
+                  <td>
+                    <div className="flex flex-wrap gap-1">
+                      {user.roles.map((role, idx) => (
+                        <span
+                          key={idx}
+                          className={`badge ${
+                            role.name === "Admin"
+                              ? "badge-primary"
+                              : role.name === "HR"
+                              ? "badge-secondary"
+                              : role.name === "Manager"
+                              ? "badge-accent"
+                              : "badge-ghost"
+                          } badge-sm`}
+                        >
+                          {role.name}
                         </span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldAlert className="w-4 h-4 text-error" />
-                        <span className="badge badge-error badge-sm">Khóa</span>
-                      </>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  <div className="flex gap-2">
-                    <Link href={"/account/account-management/detail-account"}>
-                      <button
-                        className="btn btn-ghost btn-xs"
-                        title="Quản lý quyền"
+                      ))}
+                    </div>
+                  </td>
+                  <td className="p-0">
+                    <div className="flex items-center gap-1">
+                      {user.is_active ? (
+                        <>
+                          <ShieldCheck className="w-4 h-4 text-success" />
+                          <span className="badge badge-success badge-sm">
+                            Hoạt động
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldAlert className="w-4 h-4 text-error" />
+                          <span className="badge badge-error badge-sm">
+                            Khóa
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/account/account-management/detail-account?id=${user.user_id}`}
                       >
-                        <UserCog className="w-4 h-4" />
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          title="Quản lý quyền"
+                        >
+                          <UserCog className="w-4 h-4" />
+                        </button>
+                      </Link>
+                      <button
+                        className="btn btn-ghost btn-xs text-error"
+                        title="Xóa tài khoản"
+                        onClick={() => handleDelete(user.user_id)}
+                      >
+                        <Trash className="w-4 h-4" />
                       </button>
-                    </Link>
-                    <button
-                      className="btn btn-ghost btn-xs text-error"
-                      title="Xóa tài khoản"
-                    >
-                      <Trash className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* Pagination */}
       <div className="flex justify-between items-center p-4 border-t border-base-300">
         <div className="text-sm">
           Hiển thị <span className="font-medium">1-{filteredUsers.length}</span>{" "}

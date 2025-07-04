@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
-import { LeaveRequest, LeaveType } from "@/components/modals/LeaveRequestModal";
+import axios, { AxiosResponse } from "axios";
+import { toast } from "react-toastify";
+import { LeaveRequest, LeaveType } from "@/types/leaveRequest";
 
-// Hàm tính số ngày nghỉ
 const calculateDays = (startDate: string, endDate: string): number => {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -13,21 +14,35 @@ const calculateDays = (startDate: string, endDate: string): number => {
 interface LeaveRequestFormProps {
   setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
   setActiveTab: React.Dispatch<React.SetStateAction<"request" | "history">>;
+  editRequest: LeaveRequest | null;
+  setEditRequest: React.Dispatch<React.SetStateAction<LeaveRequest | null>>;
 }
 
 const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
   setLeaveRequests,
   setActiveTab,
+  editRequest,
+  setEditRequest,
 }) => {
-  // Form state
   const [leaveForm, setLeaveForm] = useState({
-    leave_type: "Nghỉ phép" as LeaveType,
+    leave_type: "ANNUAL" as LeaveType,
     start_date: "",
     end_date: "",
     reason: "",
   });
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Xử lý khi thay đổi form
+  useEffect(() => {
+    if (editRequest) {
+      setLeaveForm({
+        leave_type: editRequest.leave_type,
+        start_date: editRequest.start_date.split("T")[0],
+        end_date: editRequest.end_date.split("T")[0],
+        reason: editRequest.reason || "",
+      });
+    }
+  }, [editRequest]);
+
   const handleFormChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -40,46 +55,116 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
     }));
   };
 
-  // Xử lý gửi form
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Kiểm tra dữ liệu
     if (!leaveForm.start_date || !leaveForm.end_date || !leaveForm.reason) {
-      alert("Vui lòng điền đầy đủ thông tin!");
+      toast.error("Vui lòng điền đầy đủ thông tin!");
       return;
     }
 
-    // Tạo đơn nghỉ phép mới
-    const newRequest: LeaveRequest = {
-      leave_request_id: `${Date.now()}`,
-      employee_id: "101", // Giả định ID nhân viên đang đăng nhập
-      employee_name: "Nguyễn Văn A",
-      leave_type: leaveForm.leave_type,
-      start_date: leaveForm.start_date,
-      end_date: leaveForm.end_date,
-      reason: leaveForm.reason,
-      status: "Chờ duyệt",
-      approver_id: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      department: "",
-      approver_name: null,
-    };
+    if (new Date(leaveForm.start_date) > new Date(leaveForm.end_date)) {
+      toast.error("Ngày bắt đầu không được lớn hơn ngày kết thúc");
+      return;
+    }
+    if (new Date(leaveForm.start_date) < new Date()) {
+      toast.error("Ngày bắt đầu không được trong quá khứ");
+      return;
+    }
 
-    // Cập nhật danh sách
-    setLeaveRequests((prev) => [newRequest, ...prev]);
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Không tìm thấy token");
+      }
 
-    // Reset form
+      const userData = localStorage.getItem("user");
+      if (!userData) {
+        throw new Error("Không tìm thấy thông tin người dùng");
+      }
+      const user = JSON.parse(userData) as {
+        employee_id: string;
+        role_id: string;
+      };
+
+      let response: AxiosResponse<never, unknown>;
+      if (editRequest) {
+        response = await axios.put(
+          `/api/leave/leave-requests/${editRequest.leave_request_id}`,
+          {
+            employee_id: user.employee_id,
+            leave_type: leaveForm.leave_type,
+            start_date: leaveForm.start_date,
+            end_date: leaveForm.end_date,
+            reason: leaveForm.reason,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setLeaveRequests((prev) =>
+          prev.map((req) =>
+            req.leave_request_id === editRequest.leave_request_id
+              ? response.data
+              : req
+          )
+        );
+      } else {
+        response = await axios.post(
+          "/api/leave/leave-requests",
+          {
+            employee_id: user.employee_id,
+            leave_type: leaveForm.leave_type,
+            start_date: leaveForm.start_date,
+            end_date: leaveForm.end_date,
+            reason: leaveForm.reason,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setLeaveRequests((prev) => [response.data, ...prev]);
+      }
+
+      setLeaveForm({
+        leave_type: "ANNUAL",
+        start_date: "",
+        end_date: "",
+        reason: "",
+      });
+      setEditRequest(null);
+      toast.dismiss();
+      setActiveTab("history");
+      toast.success(
+        editRequest
+          ? "Cập nhật đơn nghỉ phép thành công!"
+          : "Đã gửi yêu cầu nghỉ phép thành công!"
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : editRequest
+          ? "Không thể cập nhật đơn nghỉ phép"
+          : "Không thể tạo đơn nghỉ phép";
+      toast.error(errorMessage);
+      console.error(
+        editRequest
+          ? "Lỗi khi cập nhật đơn nghỉ phép:"
+          : "Lỗi khi tạo đơn nghỉ phép:",
+        error
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
     setLeaveForm({
-      leave_type: "Nghỉ phép",
+      leave_type: "ANNUAL",
       start_date: "",
       end_date: "",
       reason: "",
     });
-
-    // Chuyển sang tab lịch sử
-    setActiveTab("history");
+    setEditRequest(null);
   };
 
   return (
@@ -87,7 +172,9 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
       <div className="card-body">
         <h2 className="card-title flex items-center mb-4">
           <Calendar className="w-5 h-5 mr-2" />
-          Tạo đơn xin nghỉ phép
+          {editRequest
+            ? "Chỉnh sửa đơn xin nghỉ phép"
+            : "Tạo đơn xin nghỉ phép"}
         </h2>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -101,14 +188,14 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
                 value={leaveForm.leave_type}
                 onChange={handleFormChange}
               >
-                <option value="Nghỉ phép">Nghỉ phép</option>
-                <option value="Nghỉ bệnh">Nghỉ bệnh</option>
-                <option value="Nghỉ việc riêng">Nghỉ việc riêng</option>
+                <option value="ANNUAL">Nghỉ phép</option>
+                <option value="SICK">Nghỉ bệnh</option>
+                <option value="PERSONAL">Nghỉ việc riêng</option>
               </select>
             </div>
 
-            <div className="grid gap-2 form-control">
-              <label className="label">
+            <div className="form-control grid">
+              <label className="label pb-2">
                 <span className="label-text">Ngày bắt đầu</span>
               </label>
               <input
@@ -121,8 +208,8 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
               />
             </div>
 
-            <div className="grid gap-2 form-control">
-              <label className="label">
+            <div className="form-control grid">
+              <label className="label pb-2">
                 <span className="label-text">Ngày kết thúc</span>
               </label>
               <input
@@ -137,8 +224,8 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
               />
             </div>
 
-            <div className="grid gap-2 form-control">
-              <label className="label">
+            <div className="form-control grid">
+              <label className="label pb-2">
                 <span className="label-text">Số ngày nghỉ</span>
               </label>
               <input
@@ -154,8 +241,8 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
             </div>
           </div>
 
-          <div className="grid gap-2 form-control mt-4">
-            <label className="label">
+          <div className="form-control mt-4 grid">
+            <label className="label pb-2">
               <span className="label-text">Lý do nghỉ phép</span>
             </label>
             <textarea
@@ -171,19 +258,21 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
             <button
               type="button"
               className="btn btn-outline"
-              onClick={() => {
-                setLeaveForm({
-                  leave_type: "Nghỉ phép",
-                  start_date: "",
-                  end_date: "",
-                  reason: "",
-                });
-              }}
+              onClick={handleCancel}
+              disabled={submitting}
             >
               Hủy
             </button>
-            <button type="submit" className="btn btn-primary">
-              Gửi yêu cầu
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={submitting}
+            >
+              {submitting
+                ? "Đang xử lý..."
+                : editRequest
+                ? "Cập nhật yêu cầu"
+                : "Gửi yêu cầu"}
             </button>
           </div>
         </form>

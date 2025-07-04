@@ -14,16 +14,6 @@ const DepartmentDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Toast thử nghiệm
-  useEffect(() => {
-    console.log("Running test toast in DepartmentDetail");
-    toast.success("Test toast - DepartmentDetail loaded", {
-      autoClose: 3000,
-      position: "top-right",
-      theme: "light",
-    });
-  }, []);
-
   // Fetch dữ liệu phòng ban
   useEffect(() => {
     if (!id) return;
@@ -260,7 +250,7 @@ const DepartmentDetail: React.FC = () => {
 
         {activeTab === "members" && (
           <div>
-            <div className="form-control mb-4">
+            <div className="form-control mb-4 grid gap-1">
               <label className="label">
                 <span className="label-text">Tìm kiếm nhân viên</span>
               </label>

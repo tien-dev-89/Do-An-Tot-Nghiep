@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 interface Props {
   drawerId: string;
+  fetchTasks: (page?: number) => Promise<void>;
 }
 
 interface Department {
@@ -21,7 +22,7 @@ interface Position {
   employee_count?: number;
 }
 
-export default function AddEmployee({ drawerId }: Props) {
+export default function AddEmployee({ drawerId, fetchTasks }: Props) {
   const router = useRouter();
   const [avatarUrl, setAvatarUrl] = useState<string>(
     "https://i.pravatar.cc/300"
@@ -79,7 +80,8 @@ export default function AddEmployee({ drawerId }: Props) {
 
       const data = await response.json();
       console.log("API GET /api/departments response:", data);
-      setDepartments(data);
+      // Gán mảng departments từ data.departments
+      setDepartments(data.departments || []);
     } catch (error) {
       console.error("Lỗi khi lấy danh sách phòng ban:", error);
       const errorMessage =
@@ -181,6 +183,21 @@ export default function AddEmployee({ drawerId }: Props) {
       toast.error(errorMessage);
       return false;
     }
+    if (gender && !["Nam", "Nữ"].includes(gender)) {
+      const errorMessage = "Giới tính không hợp lệ. Vui lòng chọn Nam hoặc Nữ.";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return false;
+    }
+    if (
+      !["Đang làm", "Thử việc", "Nghỉ việc", "Nghỉ thai sản"].includes(status)
+    ) {
+      const errorMessage =
+        "Trạng thái không hợp lệ. Vui lòng chọn Đang làm, Thử việc, Nghỉ việc hoặc Nghỉ thai sản.";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return false;
+    }
     return true;
   };
 
@@ -193,7 +210,8 @@ export default function AddEmployee({ drawerId }: Props) {
     setEmail("");
     setAddress("");
     setJoinDate("");
-    setStatus("ACTIVE");
+    // setStatus("ACTIVE");
+    setStatus("Đang làm"); // Đặt lại thành "Đang làm"
     setDepartment("");
     setPosition("");
     setError(null);
@@ -211,26 +229,29 @@ export default function AddEmployee({ drawerId }: Props) {
         return;
       }
 
+      const payload = {
+        full_name: fullName,
+        email,
+        phone_number: phone || null,
+        birth_date: birthDate ? new Date(birthDate).toISOString() : null,
+        gender: gender || null, // Đã sửa thành "Nam", "Nữ" từ câu trả lời trước
+        address: address || null,
+        department_id: department || null,
+        position_id: position || null,
+        employment_status: status, // Gửi trực tiếp "Đang làm", "Thử việc", v.v.
+        join_date: joinDate ? new Date(joinDate).toISOString() : null,
+        avatar_url:
+          avatarUrl === "https://i.pravatar.cc/300" ? null : avatarUrl,
+      };
+      console.log("Payload gửi đi:", payload); // Debug payload
+
       const response = await fetch("/api/employees", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `x ${token}`,
         },
-        body: JSON.stringify({
-          full_name: fullName,
-          email,
-          phone_number: phone || null,
-          birth_date: birthDate ? new Date(birthDate).toISOString() : null,
-          gender: gender || null,
-          address: address || null,
-          department_id: department || null,
-          position_id: position || null,
-          employment_status: status,
-          join_date: joinDate ? new Date(joinDate).toISOString() : null,
-          avatar_url:
-            avatarUrl === "https://i.pravatar.cc/300" ? null : avatarUrl,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -242,7 +263,10 @@ export default function AddEmployee({ drawerId }: Props) {
       if (response.ok) {
         toast.success("Thêm nhân viên thành công");
         handleReset();
+        // Đóng drawer
         (document.getElementById(drawerId) as HTMLInputElement).checked = false;
+        // Cập nhật bảng nhân viên
+        await fetchTasks(1); // Gọi fetchTasks để reload bảng, bắt đầu từ trang 1
       } else {
         if (response.status === 401) {
           toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
@@ -322,9 +346,8 @@ export default function AddEmployee({ drawerId }: Props) {
               <option value="" disabled>
                 Chọn giới tính
               </option>
-              <option value="MALE">Nam</option>
-              <option value="FEMALE">Nữ</option>
-              <option value="OTHER">Khác</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
             </select>
           </div>
           <div>
@@ -370,10 +393,10 @@ export default function AddEmployee({ drawerId }: Props) {
               onChange={(e) => setStatus(e.target.value)}
               className="select select-bordered w-full"
             >
-              <option value="ACTIVE">Đang làm</option>
-              <option value="PROBATION">Thử việc</option>
-              <option value="TERMINATED">Nghỉ việc</option>
-              <option value="MATERNITY">Nghỉ thai sản</option>
+              <option value="Đang làm">Đang làm</option>
+              <option value="Thử việc">Thử việc</option>
+              <option value="Nghỉ việc">Nghỉ việc</option>
+              <option value="Nghỉ thai sản">Nghỉ thai sản</option>
             </select>
           </div>
           <div>
@@ -387,11 +410,12 @@ export default function AddEmployee({ drawerId }: Props) {
               <option value="" disabled>
                 Chọn phòng ban
               </option>
-              {departments.map((dep) => (
-                <option key={dep.department_id} value={dep.department_id}>
-                  {dep.name} ({dep.employee_count || 0} nhân viên)
-                </option>
-              ))}
+              {Array.isArray(departments) &&
+                departments.map((dep) => (
+                  <option key={dep.department_id} value={dep.department_id}>
+                    {dep.name} ({dep.employee_count || 0} nhân viên)
+                  </option>
+                ))}
             </select>
           </div>
           <div>

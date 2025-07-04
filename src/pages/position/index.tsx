@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { PlusCircle, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { PlusCircle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   PositionFormModal,
@@ -162,79 +162,6 @@ const PositionsPage: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </label>
-            </div>
-
-            <div className="flex items-center">
-              <div className="dropdown dropdown-end">
-                <label
-                  tabIndex={0}
-                  className="btn btn-outline flex justify-between w-40"
-                >
-                  <span>Sắp xếp</span>
-                  <ChevronDown className="h-5 w-5" />
-                </label>
-                <ul
-                  tabIndex={0}
-                  className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52"
-                >
-                  <li>
-                    <a
-                      onClick={() =>
-                        setPositions(
-                          [...positions].sort((a, b) =>
-                            a.name.localeCompare(b.name)
-                          )
-                        )
-                      }
-                    >
-                      Tên (A-Z)
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      onClick={() =>
-                        setPositions(
-                          [...positions].sort((a, b) =>
-                            b.name.localeCompare(b.name)
-                          )
-                        )
-                      }
-                    >
-                      Tên (Z-A)
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      onClick={() =>
-                        setPositions(
-                          [...positions].sort(
-                            (a, b) =>
-                              new Date(b.created_at).getTime() -
-                              new Date(a.created_at).getTime()
-                          )
-                        )
-                      }
-                    >
-                      Ngày tạo (Mới nhất)
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      onClick={() =>
-                        setPositions(
-                          [...positions].sort(
-                            (a, b) =>
-                              new Date(a.created_at).getTime() -
-                              new Date(b.created_at).getTime()
-                          )
-                        )
-                      }
-                    >
-                      Ngày tạo (Cũ nhất)
-                    </a>
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
 

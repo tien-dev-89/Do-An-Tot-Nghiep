@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { FileText, Check, X, Edit, Trash2 } from "lucide-react";
+import { FileText, Eye, Edit2 } from "lucide-react";
 import {
   LeaveRequest,
   LeaveRequestStatus,
   LeaveType,
-} from "@/components/modals/LeaveRequestModal";
+} from "@/types/leaveRequest";
 
-// Hàm tính số ngày nghỉ
 const calculateDays = (startDate: string, endDate: string): number => {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -18,12 +17,15 @@ interface LeaveHistoryProps {
   leaveRequests: LeaveRequest[];
   setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
   setActiveTab: React.Dispatch<React.SetStateAction<"request" | "history">>;
+  handleViewDetails: (request: LeaveRequest, fromHistory?: boolean) => void;
+  setEditRequest: (request: LeaveRequest | null) => void;
 }
 
 const LeaveHistory: React.FC<LeaveHistoryProps> = ({
   leaveRequests,
-  setLeaveRequests,
   setActiveTab,
+  handleViewDetails,
+  setEditRequest,
 }) => {
   const [filteredRequests, setFilteredRequests] =
     useState<LeaveRequest[]>(leaveRequests);
@@ -32,7 +34,6 @@ const LeaveHistory: React.FC<LeaveHistoryProps> = ({
   >("Tất cả");
   const [typeFilter, setTypeFilter] = useState<LeaveType | "Tất cả">("Tất cả");
 
-  // Cập nhật bộ lọc khi có sự thay đổi
   useEffect(() => {
     let filtered = [...leaveRequests];
 
@@ -49,20 +50,8 @@ const LeaveHistory: React.FC<LeaveHistoryProps> = ({
     setFilteredRequests(filtered);
   }, [statusFilter, typeFilter, leaveRequests]);
 
-  // Xử lý hủy đơn
-  const handleCancelRequest = (id: string) => {
-    if (confirm("Bạn có chắc muốn hủy đơn nghỉ phép này?")) {
-      setLeaveRequests((prev) =>
-        prev.filter((request) => request.leave_request_id !== id)
-      );
-    }
-  };
-
-  // Xử lý chỉnh sửa đơn
   const handleEditRequest = (request: LeaveRequest) => {
-    setLeaveRequests((prev) =>
-      prev.filter((r) => r.leave_request_id !== request.leave_request_id)
-    );
+    setEditRequest(request);
     setActiveTab("request");
   };
 
@@ -95,9 +84,9 @@ const LeaveHistory: React.FC<LeaveHistoryProps> = ({
               }
             >
               <option value="Tất cả">Tất cả loại nghỉ</option>
-              <option value="Nghỉ phép">Nghỉ phép</option>
-              <option value="Nghỉ bệnh">Nghỉ bệnh</option>
-              <option value="Nghỉ việc riêng">Nghỉ việc riêng</option>
+              <option value="ANNUAL">Nghỉ phép</option>
+              <option value="SICK">Nghỉ bệnh</option>
+              <option value="PERSONAL">Nghỉ việc riêng</option>
             </select>
           </div>
         </div>
@@ -118,7 +107,13 @@ const LeaveHistory: React.FC<LeaveHistoryProps> = ({
               {filteredRequests.length > 0 ? (
                 filteredRequests.map((request) => (
                   <tr key={request.leave_request_id}>
-                    <td>{request.leave_type}</td>
+                    <td>
+                      {request.leave_type === "ANNUAL"
+                        ? "Nghỉ phép"
+                        : request.leave_type === "SICK"
+                        ? "Nghỉ bệnh"
+                        : "Nghỉ việc riêng"}
+                    </td>
                     <td>
                       <div className="flex flex-col">
                         <span>
@@ -139,8 +134,11 @@ const LeaveHistory: React.FC<LeaveHistoryProps> = ({
                       {calculateDays(request.start_date, request.end_date)}
                     </td>
                     <td>
-                      <div className="max-w-xs truncate" title={request.reason}>
-                        {request.reason}
+                      <div
+                        className="max-w-xs truncate"
+                        title={request.reason || ""}
+                      >
+                        {request.reason || "Không có lý do"}
                       </div>
                     </td>
                     <td>
@@ -153,34 +151,26 @@ const LeaveHistory: React.FC<LeaveHistoryProps> = ({
                             : "badge-warning"
                         } gap-1`}
                       >
-                        {request.status === "Đã duyệt" && (
-                          <Check className="w-3 h-3" />
-                        )}
-                        {request.status === "Bị từ chối" && (
-                          <X className="w-3 h-3" />
-                        )}
                         {request.status}
                       </div>
                     </td>
                     <td>
                       <div className="flex space-x-2">
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => handleViewDetails(request, true)}
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                         {request.status === "Chờ duyệt" && (
-                          <>
-                            <button
-                              className="btn btn-ghost btn-xs"
-                              onClick={() => handleEditRequest(request)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-xs text-error"
-                              onClick={() =>
-                                handleCancelRequest(request.leave_request_id)
-                              }
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
+                          <button
+                            className="btn btn-ghost btn-xs"
+                            onClick={() => handleEditRequest(request)}
+                            title="Chỉnh sửa"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </td>

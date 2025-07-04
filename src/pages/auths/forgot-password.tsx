@@ -123,7 +123,7 @@ export default function ForgotPassword() {
 
           <p className="text-sm text-center mt-4">
             <Link
-              href="/auth/login"
+              href="/auths/login"
               className="text-blue-700 hover:text-blue-500 hover:underline"
             >
               Quay lại trang đăng nhập

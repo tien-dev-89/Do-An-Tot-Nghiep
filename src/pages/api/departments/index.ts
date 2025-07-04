@@ -1,9 +1,9 @@
+// File: pages/api/departments/index.ts
 import { PrismaClient, EmploymentStatus } from '@prisma/client';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 const prisma = new PrismaClient();
 
-// Type guard cho req.body
 interface DepartmentInput {
   department_id?: string;
   name: string;
@@ -24,9 +24,20 @@ const isDepartmentInput = (data: unknown): data is DepartmentInput => {
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Kiểm tra token cho tất cả các method
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("x ")) {
+    return res.status(401).json({ error: "Thiếu hoặc sai định dạng token" });
+  }
+
   // GET: Lấy danh sách phòng ban
   if (req.method === 'GET') {
     try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("x ")) {
+        return res.status(401).json({ error: "Thiếu hoặc sai định dạng token" });
+      }
+  
       const departments = await prisma.departments.findMany({
         select: {
           department_id: true,
@@ -49,7 +60,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         },
       });
-
+  
+      const total = await prisma.departments.count();
+  
       const response = departments.map((dept) => ({
         department_id: dept.department_id,
         name: dept.name,
@@ -58,9 +71,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         description: dept.description,
         employee_count: dept._count.employees,
       }));
-
-      console.log('Departments fetched:', response);
-      return res.status(200).json(response);
+  
+      // console.log('Departments fetched:', response);
+      return res.status(200).json({ departments: response, total });
     } catch (error) {
       console.error('Lỗi khi lấy danh sách phòng ban:', error);
       return res.status(500).json({ error: 'Lỗi máy chủ nội bộ', details: String(error) });
@@ -93,7 +106,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      // Kiểm tra tên phòng ban trùng lặp
       const existingDepartment = await prisma.departments.findFirst({
         where: { name: name.trim() },
       });
@@ -166,7 +178,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      // Kiểm tra tên phòng ban trùng lặp (trừ chính nó)
       const existingDepartment = await prisma.departments.findFirst({
         where: {
           name: name.trim(),
@@ -211,7 +222,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         manager_id: updatedDepartment.manager_id,
         manager_name: updatedDepartment.manager?.full_name || null,
         employee_count: employeeCount,
-        employees: [], // Để đồng bộ với /api/departments/[id]
+        employees: [],
       };
 
       return res.status(200).json(response);

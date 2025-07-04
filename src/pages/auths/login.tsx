@@ -1,21 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { toast } from "react-toastify";
 
 const schema = z.object({
   email: z
     .string()
     .email("Nhập địa chỉ email hợp lệ")
     .nonempty("Email là bắt buộc"),
-  // password: z
-  //   .string()
-  //   .nonempty("Mật khẩu là bắt buộc")
-  //   .min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
   password: z
     .string()
     .nonempty("Mật khẩu là bắt buộc")
@@ -29,7 +26,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
-  const [isPageLoading, setIsPageLoading] = useState(false); // Trạng thái cho việc tải trang
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
 
@@ -42,44 +39,53 @@ export default function Login() {
   });
 
   const onSubmit = async (data: FormData) => {
-    setLoading(true); // Bắt đầu loading
-    setIsPageLoading(true); // Bắt đầu tải trang
-    setErrorMessage(""); // Xóa thông báo lỗi
+    setLoading(true);
+    setIsPageLoading(true);
+    setErrorMessage("");
 
     try {
-      // Gọi API đăng nhập
-      const response = await fetch("/api/auths/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
+      const response = await axios.post("/api/auths/login", data);
+      const result = response.data;
 
       if (!result.success) {
         setErrorMessage(result.message || "Đăng nhập thất bại");
-        setLoading(false); // Dừng loading
+        toast.error(result.message || "Đăng nhập thất bại");
+        setLoading(false);
       } else {
-        // Lưu JWT và thông tin người dùng vào localStorage
         localStorage.setItem("token", result.token);
         localStorage.setItem("user", JSON.stringify(result.user));
 
-        // Chuyển hướng đến dashboard
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            user_id: result.user.user_id,
+            username: result.user.username,
+            email: result.user.email,
+            employee_id: result.user.employee_id,
+            roles: result.user.roles,
+            role_id: result.user.role_id, // Thêm role_id
+          })
+        );
+
+        toast.success("Đăng nhập thành công!");
         router.push("/");
       }
-    } catch (error) {
-      console.error("Error login:", error);
-      setErrorMessage("Đã xảy ra lỗi. Vui lòng thử lại.");
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const message =
+          error.response?.data?.message || "Đã xảy ra lỗi. Vui lòng thử lại.";
+        setErrorMessage(message);
+        toast.error(message);
+      } else {
+        setErrorMessage("Đã xảy ra lỗi. Vui lòng thử lại.");
+        toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
+      }
     } finally {
-      // Dừng loading và tải trang
-      setLoading(false); // Dừng loading
+      setLoading(false);
       setIsPageLoading(false);
     }
   };
 
-  // Nếu trang đang tải, hiển thị "Loading"
   if (isPageLoading) {
     return <p>Loading...</p>;
   }
@@ -212,7 +218,7 @@ export default function Login() {
                 href="/auths/forgot-password"
                 className="text-blue-700 hover:text-blue-500 hover:underline"
               >
-                Quên mât khẩu?
+                Quên mật khẩu?
               </Link>
             </p>
           </div>

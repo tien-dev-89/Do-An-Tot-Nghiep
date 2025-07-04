@@ -1,8 +1,8 @@
+// File: src/components/modals/PositionModals.tsx
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
-// Định nghĩa kiểu dữ liệu
 export interface Position {
   position_id: string;
   name: string;
@@ -18,7 +18,6 @@ interface Department {
   name: string;
 }
 
-// Props cho modal thêm/chỉnh sửa
 interface PositionFormModalProps {
   isOpen: boolean;
   isEditing: boolean;
@@ -29,14 +28,12 @@ interface PositionFormModalProps {
   onChange: (field: string, value: string | string[]) => void;
 }
 
-// Props cho modal xác nhận xóa
 interface DeleteConfirmModalProps {
   isOpen: boolean;
   positionToDelete: Position | null;
   onClose: () => void;
 }
 
-// Modal thêm/chỉnh sửa chức vụ
 export const PositionFormModal: React.FC<PositionFormModalProps> = ({
   isOpen,
   isEditing,
@@ -46,25 +43,41 @@ export const PositionFormModal: React.FC<PositionFormModalProps> = ({
 }) => {
   const modalRef = useRef<HTMLDialogElement>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [isLoading, setIsLoading] = useState(false); // Thêm trạng thái loading
 
-  // Lấy danh sách phòng ban
   useEffect(() => {
     if (isOpen) {
       const fetchDepartments = async () => {
         try {
+          setIsLoading(true);
           const token = localStorage.getItem("token");
+          if (!token) {
+            toast.error("Vui lòng đăng nhập lại");
+            return;
+          }
           const res = await fetch("/api/departments", {
             headers: { Authorization: `x ${token}` },
           });
           const data = await res.json();
-          if (res.ok) {
-            setDepartments(data);
+          console.log("Fetch departments response:", data); // Log để kiểm tra
+          if (res.ok && Array.isArray(data.departments)) {
+            setDepartments(data.departments);
           } else {
-            toast.error("Lỗi khi tải danh sách phòng ban");
+            if (res.status === 401) {
+              localStorage.removeItem("token");
+              toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+              window.location.href = "/login";
+              return;
+            }
+            toast.error(data.error || "Lỗi khi tải danh sách phòng ban");
+            setDepartments([]);
           }
         } catch (error) {
           console.error("Fetch departments error:", error);
           toast.error(`Lỗi: ${String(error)}`);
+          setDepartments([]);
+        } finally {
+          setIsLoading(false);
         }
       };
       fetchDepartments();
@@ -80,7 +93,7 @@ export const PositionFormModal: React.FC<PositionFormModalProps> = ({
   }, [isOpen]);
 
   const handleSave = async () => {
-    if ("name" in currentPosition && !currentPosition.name.trim()) {
+    if (!("name" in currentPosition) || !currentPosition.name?.trim()) {
       toast.error("Tên chức vụ không được để trống");
       return;
     }
@@ -98,20 +111,25 @@ export const PositionFormModal: React.FC<PositionFormModalProps> = ({
           : "/api/positions";
       const method = isEditing ? "PUT" : "POST";
 
+      const payload = {
+        name: currentPosition.name.trim(),
+        description: currentPosition.description?.trim() || null,
+        department_ids:
+          "department_ids" in currentPosition &&
+          Array.isArray(currentPosition.department_ids)
+            ? currentPosition.department_ids
+            : [],
+      };
+
+      console.log("Sending payload to API:", payload); // Log để kiểm tra
+
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `x ${token}`,
         },
-        body: JSON.stringify({
-          name: currentPosition.name.trim(),
-          description: currentPosition.description.trim() || null,
-          department_ids:
-            "department_ids" in currentPosition
-              ? currentPosition.department_ids
-              : [],
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -123,6 +141,12 @@ export const PositionFormModal: React.FC<PositionFormModalProps> = ({
         );
         onClose();
       } else {
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+          window.location.href = "/login";
+          return;
+        }
         toast.error(data.error || "Lỗi khi lưu chức vụ");
       }
     } catch (error) {
@@ -133,8 +157,9 @@ export const PositionFormModal: React.FC<PositionFormModalProps> = ({
 
   const handleDepartmentChange = (deptId: string) => {
     const currentDeptIds =
-      "department_ids" in currentPosition
-        ? currentPosition.department_ids || []
+      "department_ids" in currentPosition &&
+      Array.isArray(currentPosition.department_ids)
+        ? currentPosition.department_ids
         : [];
     const newDeptIds = currentDeptIds.includes(deptId)
       ? currentDeptIds.filter((id) => id !== deptId)
@@ -178,7 +203,7 @@ export const PositionFormModal: React.FC<PositionFormModalProps> = ({
               className="textarea textarea-bordered h-24"
               value={
                 "description" in currentPosition
-                  ? currentPosition.description
+                  ? currentPosition.description || ""
                   : ""
               }
               onChange={(e) => onChange("description", e.target.value)}
@@ -190,26 +215,37 @@ export const PositionFormModal: React.FC<PositionFormModalProps> = ({
               <span className="label-text">Phòng ban áp dụng</span>
             </label>
             <div className="max-h-40 overflow-y-auto">
-              {departments.map((dept) => (
-                <div key={dept.department_id} className="form-control">
-                  <label className="label cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-primary"
-                      checked={
-                        "department_ids" in currentPosition &&
-                        currentPosition.department_ids?.includes(
-                          dept.department_id
-                        )
-                      }
-                      onChange={() =>
-                        handleDepartmentChange(dept.department_id)
-                      }
-                    />
-                    <span className="label-text ml-2">{dept.name}</span>
-                  </label>
+              {isLoading ? (
+                <div className="flex justify-center">
+                  <span className="loading loading-spinner loading-sm"></span>
                 </div>
-              ))}
+              ) : Array.isArray(departments) && departments.length > 0 ? (
+                departments.map((dept) => (
+                  <div key={dept.department_id} className="form-control">
+                    <label className="label cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-primary"
+                        checked={
+                          "department_ids" in currentPosition &&
+                          Array.isArray(currentPosition.department_ids) &&
+                          currentPosition.department_ids.includes(
+                            dept.department_id
+                          )
+                        }
+                        onChange={() =>
+                          handleDepartmentChange(dept.department_id)
+                        }
+                      />
+                      <span className="label-text ml-2">{dept.name}</span>
+                    </label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-base-content/70">
+                  Không có phòng ban nào
+                </p>
+              )}
             </div>
           </div>
 
@@ -236,7 +272,7 @@ export const PositionFormModal: React.FC<PositionFormModalProps> = ({
   );
 };
 
-// Modal xác nhận xóa
+// Giữ nguyên DeleteConfirmModal
 export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   isOpen,
   positionToDelete,
@@ -279,6 +315,12 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
         toast.success("Xóa chức vụ thành công");
         onClose();
       } else {
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+          window.location.href = "/login";
+          return;
+        }
         toast.error(data.error || "Lỗi khi xóa chức vụ");
       }
     } catch (error) {
