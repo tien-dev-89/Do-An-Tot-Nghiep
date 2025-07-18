@@ -109,10 +109,14 @@ const PositionsPage: React.FC = () => {
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href="/">Trang chủ</Link>
+            <Link href="/" className="text-primary">
+              Trang chủ
+            </Link>
           </li>
           <li>
-            <Link href="/positions">Chức vụ</Link>
+            <Link href="/positions" className="text-primary">
+              Chức vụ
+            </Link>
           </li>
         </ul>
       </div>

@@ -190,7 +190,7 @@ const LoginLog: React.FC = () => {
                   <td>{log.activity}</td>
                   <td>
                     <span
-                      className={`badge ${
+                      className={`badge h-10 ${
                         log.status === "Thành công"
                           ? "badge-success"
                           : "badge-error"

@@ -770,14 +770,14 @@ const Index: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="badge badge-outline badge-lg">
+                        <div className="badge badge-outline badge-lg h-[50px]">
                           {emp.department_name}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">{emp.position_name}</td>
                       <td className="px-4 py-3">
                         <div
-                          className={`badge ${
+                          className={`badge h-[45px] ${
                             emp.employment_status === "Đang làm"
                               ? "badge-success text-white"
                               : emp.employment_status === "Nghỉ việc"

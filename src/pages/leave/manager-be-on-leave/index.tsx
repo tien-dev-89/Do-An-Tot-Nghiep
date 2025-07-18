@@ -195,10 +195,14 @@ export default function LeaveManagement() {
         <div className="breadcrumbs text-sm">
           <ul>
             <li>
-              <Link href="/">Trang chủ</Link>
+              <Link href="/" className="text-primary">
+                Trang chủ
+              </Link>
             </li>
             <li>
-              <Link href="/leave/manager-be-on-leave">Quản lý nghỉ phép</Link>
+              <Link href="/leave/manager-be-on-leave" className="text-primary">
+                Quản lý nghỉ phép
+              </Link>
             </li>
           </ul>
         </div>

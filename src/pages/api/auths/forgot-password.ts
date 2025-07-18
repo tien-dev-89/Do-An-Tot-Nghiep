@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     });
 
     // Tạo link reset mật khẩu
-    const resetLink = `${process.env.FRONTEND_URL}/auths/reset-password?token=${resetToken}`;
+    const resetLink = `${process.env.FRONTEND_URL}/api/auths/reset-password?token=${resetToken}`;
 
     // Thêm vào EmailQueue
     await prisma.emailQueue.create({
@@ -69,14 +69,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         subject: 'Yêu cầu đặt lại mật khẩu',
         body: `
           Xin chào ${user.employee.full_name},
-          <br><br>
+           
           Bạn đã yêu cầu đặt lại mật khẩu. Vui lòng nhấp vào liên kết sau để đặt lại mật khẩu:
-          <br>
-          <a href="${resetLink}">Đặt lại mật khẩu</a>
-          <br><br>
+           
+          Đặt lại mật khẩu: ${resetLink}
+           
           Liên kết này có hiệu lực trong 1 giờ. Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
-          <br><br>
-          Trân trọng,<br>
+           
+          Trân trọng,
           Đội ngũ quản lý nhân sự
         `,
         status: 'PENDING',

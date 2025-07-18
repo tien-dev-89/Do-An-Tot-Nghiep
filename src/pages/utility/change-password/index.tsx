@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import axios from "axios";
+import { toast } from "react-toastify";
 
-// Định nghĩa schema với Zod
 const schema = z
   .object({
     oldPassword: z
@@ -13,7 +14,7 @@ const schema = z
       .min(8, "Mật khẩu cũ phải có ít nhất 8 ký tự")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Mật khẩu mới phải chứa ít nhất một chữ hoa, một chữ thường và một số"
+        "Mật khẩu cũ phải chứa ít nhất một chữ hoa, một chữ thường và một số"
       ),
     newPassword: z
       .string()
@@ -48,15 +49,30 @@ export default function ChangePassword() {
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setErrorMessage("");
+
     try {
-      // Mô phỏng gọi API để thay đổi mật khẩu
-      // Thay thế bằng gọi API thực tế
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Dữ liệu thay đổi mật khẩu:", data);
-      reset(); // Xóa form sau khi thành công
-      alert("Thay đổi mật khẩu thành công!");
-    } catch {
-      setErrorMessage("Thay đổi mật khẩu thất bại. Vui lòng thử lại.");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setErrorMessage("Vui lòng đăng nhập lại để thay đổi mật khẩu");
+        toast.error("Vui lòng đăng nhập lại để thay đổi mật khẩu");
+        return;
+      }
+
+      const response = await axios.post("/api/utility/change-password", data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.success(response.data.message);
+      reset();
+    } catch (error: unknown) {
+      let message = "Thay đổi mật khẩu thất bại. Vui lòng thử lại.";
+      if (axios.isAxiosError(error)) {
+        message = error.response?.data?.error || message;
+      }
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -89,9 +105,7 @@ export default function ChangePassword() {
       {/* Nội dung chính */}
       <div className="container mx-auto px-4 py-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Thay đổi mật khẩu
-          </h1>
+          <h1 className="text-3xl font-bold text-primary">Thay đổi mật khẩu</h1>
         </header>
 
         <main className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">

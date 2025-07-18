@@ -164,10 +164,14 @@ export default function BeOnLeave() {
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href="/">Trang chủ</Link>
+            <Link href="/" className="text-primary">
+              Trang chủ
+            </Link>
           </li>
           <li>
-            <Link href="/leave/be-on-leave">Yêu cầu nghỉ phép</Link>
+            <Link href="/leave/be-on-leave" className="text-primary">
+              Yêu cầu nghỉ phép
+            </Link>
           </li>
         </ul>
       </div>

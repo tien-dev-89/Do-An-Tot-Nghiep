@@ -32,8 +32,13 @@ model Employees {
   leave_requests      LeaveRequests[]
   notifications       Notifications[]
   payrolls            Payrolls[]
+  reward_penalties    RewardPenalties[]
   user_roles          UserRoles[]
   user                Users?
+
+  RewardPenalties RewardPenalties[] @relation("Approver")
+
+  SalaryConfig SalaryConfig[]
 }
 
 model Departments {
@@ -71,6 +76,8 @@ model AttendanceRecords {
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
   employee            Employees @relation(fields: [employee_id], references: [employee_id], onDelete: Cascade)
+  shift               Shifts?   @relation(fields: [shift_id], references: [shift_id])
+  status              String
 }
 
 model LeaveRequests {
@@ -100,6 +107,21 @@ model Payrolls {
   created_at     DateTime      @default(now())
   updated_at     DateTime      @updatedAt
   employee       Employees     @relation(fields: [employee_id], references: [employee_id], onDelete: Cascade)
+}
+
+model RewardPenalties {
+  id          String              @id @default(uuid())
+  employee_id String
+  type        RewardPenaltyType
+  amount      Decimal
+  reason      String
+  month       String
+  status      RewardPenaltyStatus @default(PENDING)
+  approver_id String?
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+  employee    Employees           @relation(fields: [employee_id], references: [employee_id], onDelete: Cascade)
+  approver    Employees?          @relation("Approver", fields: [approver_id], references: [employee_id])
 }
 
 model Roles {
@@ -203,6 +225,28 @@ model Contracts {
   notifications Notifications[]
 }
 
+model Shifts {
+  shift_id   String   @id @default(uuid())
+  name       String
+  start_time String
+  end_time   String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  AttendanceRecords AttendanceRecords[]
+}
+
+model SalaryConfig {
+  id                String     @id @default(uuid())
+  employee_id       String?    @unique
+  base_salary       Decimal    @default(0.00)
+  overtime_rate     Decimal    @default(0.00) // Hệ số thưởng làm thêm (VND/giờ)
+  late_penalty_rate Decimal    @default(0.00) // Hệ số phạt đi muộn/về sớm (VND/phút)
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @updatedAt
+  employee          Employees? @relation(fields: [employee_id], references: [employee_id])
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -249,4 +293,15 @@ enum ContractStatus {
   ACTIVE
   EXPIRING
   EXPIRED
+}
+
+enum RewardPenaltyType {
+  REWARD
+  PENALTY
+}
+
+enum RewardPenaltyStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

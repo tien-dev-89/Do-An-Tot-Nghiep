@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -38,6 +38,17 @@ export default function Login() {
     resolver: zodResolver(schema),
   });
 
+  // Handle query parameters for success/error messages
+  useEffect(() => {
+    if (router.query.success) {
+      toast.success(decodeURIComponent(router.query.success as string));
+    }
+    if (router.query.error) {
+      toast.error(decodeURIComponent(router.query.error as string));
+      setErrorMessage(decodeURIComponent(router.query.error as string));
+    }
+  }, [router.query]);
+
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setIsPageLoading(true);
@@ -53,8 +64,6 @@ export default function Login() {
         setLoading(false);
       } else {
         localStorage.setItem("token", result.token);
-        localStorage.setItem("user", JSON.stringify(result.user));
-
         localStorage.setItem(
           "user",
           JSON.stringify({
@@ -63,7 +72,7 @@ export default function Login() {
             email: result.user.email,
             employee_id: result.user.employee_id,
             roles: result.user.roles,
-            role_id: result.user.role_id, // Thêm role_id
+            role_id: result.user.role_id,
           })
         );
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Download,
@@ -10,16 +10,22 @@ import {
   Check,
   ArrowUpDown,
 } from "lucide-react";
+import Pagination from "@/components/Pagination";
+import * as XLSX from "xlsx";
 
-// Define types based on database schema
 type PayrollStatus = "Đã nhận" | "Chưa nhận";
+
+interface Department {
+  department_id: string;
+  name: string;
+}
 
 interface Payroll {
   payroll_id: string;
   employee_id: string;
-  employee_name: string; // Joined from employee table
-  department: string; // Joined from department table
-  position: string; // Joined from position table
+  employee_name: string;
+  department: string;
+  position: string;
   month: string;
   base_salary: number;
   overtime_bonus: number;
@@ -30,104 +36,40 @@ interface Payroll {
   updated_at: string;
 }
 
+interface ApiResponse {
+  payrolls: Payroll[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+interface DepartmentsResponse {
+  departments: Department[];
+  total: number;
+}
+
 export default function Payroll() {
-  // State for filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string>(
     getCurrentYearMonth()
   );
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [sortColumn, setSortColumn] = useState<string>("employee_name");
+  const [selectedStatus, setSelectedStatus] = useState<PayrollStatus | "all">(
+    "all"
+  );
+  const [sortColumn, setSortColumn] = useState<keyof Payroll>("employee_name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage] = useState(10);
 
-  // Mock data for demonstration
-  const departments = [
-    { id: "dept1", name: "Kỹ thuật" },
-    { id: "dept2", name: "Nhân sự" },
-    { id: "dept3", name: "Kế toán" },
-    { id: "dept4", name: "Marketing" },
-  ];
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
 
-  const mockPayrolls: Payroll[] = [
-    {
-      payroll_id: "p1",
-      employee_id: "e1",
-      employee_name: "Nguyễn Văn A",
-      department: "Kỹ thuật",
-      position: "Lập trình viên",
-      month: "2025-05",
-      base_salary: 15000000,
-      overtime_bonus: 1500000,
-      late_penalty: 0,
-      total_salary: 16500000,
-      status: "Đã nhận",
-      created_at: "2025-05-01T08:00:00Z",
-      updated_at: "2025-05-05T10:30:00Z",
-    },
-    {
-      payroll_id: "p2",
-      employee_id: "e2",
-      employee_name: "Trần Thị B",
-      department: "Nhân sự",
-      position: "Trưởng phòng",
-      month: "2025-05",
-      base_salary: 20000000,
-      overtime_bonus: 0,
-      late_penalty: 500000,
-      total_salary: 19500000,
-      status: "Đã nhận",
-      created_at: "2025-05-01T08:00:00Z",
-      updated_at: "2025-05-05T10:30:00Z",
-    },
-    {
-      payroll_id: "p3",
-      employee_id: "e3",
-      employee_name: "Lê Văn C",
-      department: "Kế toán",
-      position: "Kế toán viên",
-      month: "2025-05",
-      base_salary: 12000000,
-      overtime_bonus: 800000,
-      late_penalty: 200000,
-      total_salary: 12600000,
-      status: "Chưa nhận",
-      created_at: "2025-05-01T08:00:00Z",
-      updated_at: "2025-05-01T08:00:00Z",
-    },
-    {
-      payroll_id: "p4",
-      employee_id: "e4",
-      employee_name: "Phạm Thị D",
-      department: "Marketing",
-      position: "Chuyên viên",
-      month: "2025-05",
-      base_salary: 13000000,
-      overtime_bonus: 1000000,
-      late_penalty: 0,
-      total_salary: 14000000,
-      status: "Chưa nhận",
-      created_at: "2025-05-01T08:00:00Z",
-      updated_at: "2025-05-01T08:00:00Z",
-    },
-    {
-      payroll_id: "p5",
-      employee_id: "e5",
-      employee_name: "Hoàng Văn E",
-      department: "Kỹ thuật",
-      position: "QA Engineer",
-      month: "2025-05",
-      base_salary: 14000000,
-      overtime_bonus: 1200000,
-      late_penalty: 300000,
-      total_salary: 14900000,
-      status: "Chưa nhận",
-      created_at: "2025-05-01T08:00:00Z",
-      updated_at: "2025-05-01T08:00:00Z",
-    },
-  ];
-
-  // Helper functions
   function getCurrentYearMonth() {
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
@@ -143,7 +85,7 @@ export default function Payroll() {
     }).format(amount);
   }
 
-  function handleSort(column: string) {
+  function handleSort(column: keyof Payroll) {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -152,60 +94,128 @@ export default function Payroll() {
     }
   }
 
-  // Filter and sort payrolls
-  const filteredPayrolls = mockPayrolls
-    .filter((payroll) => {
-      const matchesSearch = payroll.employee_name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const matchesDepartment =
-        selectedDepartment === "all" ||
-        payroll.department === selectedDepartment;
-      const matchesStatus =
-        selectedStatus === "all" || payroll.status === selectedStatus;
-      const matchesMonth = payroll.month === selectedMonth;
+  const handleExportExcel = () => {
+    const exportData = payrolls.map((payroll, index) => ({
+      STT: index + 1,
+      "Nhân viên": payroll.employee_name,
+      "Phòng ban": payroll.department,
+      "Chức vụ": payroll.position,
+      Tháng: payroll.month,
+      "Lương cơ bản": payroll.base_salary,
+      "Thưởng làm thêm": payroll.overtime_bonus,
+      Phạt: payroll.late_penalty,
+      "Tổng thực lãnh": payroll.total_salary,
+      "Trạng thái": payroll.status,
+      "Ngày tạo": new Date(payroll.created_at).toLocaleDateString("vi-VN"),
+      "Ngày cập nhật": new Date(payroll.updated_at).toLocaleDateString("vi-VN"),
+    }));
 
-      return (
-        matchesSearch && matchesDepartment && matchesStatus && matchesMonth
-      );
-    })
-    .sort((a, b) => {
-      if (sortColumn === "employee_name") {
-        return sortDirection === "asc"
-          ? a.employee_name.localeCompare(b.employee_name)
-          : b.employee_name.localeCompare(a.employee_name);
-      } else if (sortColumn === "base_salary") {
-        return sortDirection === "asc"
-          ? a.base_salary - b.base_salary
-          : b.base_salary - a.base_salary;
-      } else if (sortColumn === "total_salary") {
-        return sortDirection === "asc"
-          ? a.total_salary - b.total_salary
-          : b.total_salary - a.total_salary;
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bảng lương");
+    XLSX.writeFile(workbook, `Bang_luong_${selectedMonth}.xlsx`);
+  };
+
+  useEffect(() => {
+    async function fetchDepartments() {
+      try {
+        const response = await fetch("/api/departments", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          throw new Error("Không thể lấy danh sách phòng ban");
+        }
+        const data = (await response.json()) as DepartmentsResponse;
+        setDepartments(data.departments);
+      } catch (err) {
+        setError("Lỗi khi tải danh sách phòng ban");
+        console.error(err);
       }
-      return 0;
-    });
+    }
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    async function fetchPayrolls() {
+      setLoading(true);
+      try {
+        const queryParams = new URLSearchParams({
+          month: selectedMonth,
+          ...(selectedDepartment !== "all" && {
+            department: selectedDepartment,
+          }),
+          ...(selectedStatus !== "all" && { status: selectedStatus }),
+          ...(searchQuery && { search: searchQuery }),
+          page: currentPage.toString(),
+          limit: itemsPerPage.toString(),
+        });
+        const response = await fetch(`/api/payrolls?${queryParams}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          throw new Error("Không thể lấy danh sách bảng lương");
+        }
+        const data = (await response.json()) as ApiResponse;
+        const sortedPayrolls = data.payrolls.sort((a, b) => {
+          if (sortColumn === "employee_name") {
+            return sortDirection === "asc"
+              ? a.employee_name.localeCompare(b.employee_name)
+              : b.employee_name.localeCompare(a.employee_name);
+          } else if (sortColumn === "base_salary") {
+            return sortDirection === "asc"
+              ? a.base_salary - b.base_salary
+              : b.base_salary - a.base_salary;
+          } else if (sortColumn === "total_salary") {
+            return sortDirection === "asc"
+              ? a.total_salary - b.total_salary
+              : b.total_salary - a.total_salary;
+          }
+          return 0;
+        });
+        setPayrolls(sortedPayrolls);
+        setTotalItems(data.total);
+        setError(null);
+      } catch (err) {
+        setError("Lỗi khi tải danh sách bảng lương");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPayrolls();
+  }, [
+    selectedMonth,
+    selectedDepartment,
+    selectedStatus,
+    searchQuery,
+    currentPage,
+    sortColumn,
+    sortDirection,
+  ]);
 
   return (
     <div>
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href={"/"}>Trang chủ</Link>
+            <Link href={"/"} className="text-primary">
+              Trang chủ
+            </Link>
           </li>
           <li>
-            <Link href={"/employees"}>Employees</Link>
+            <Link href={"/employees"} className="text-primary">
+              Employees
+            </Link>
           </li>
         </ul>
       </div>
 
       <div className="flex flex-col min-h-screen bg-base-200">
-        {/* Header */}
         <header className="bg-base-100 shadow-md rounded-sm">
           <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
             <h1 className="text-2xl font-semibold text-primary">Bảng Lương</h1>
             <div className="flex gap-2">
-              <button className="btn btn-primary">
+              <button className="btn btn-primary" onClick={handleExportExcel}>
                 <Download size={18} />
                 Xuất Excel
               </button>
@@ -213,37 +223,28 @@ export default function Payroll() {
           </div>
         </header>
 
-        {/* Main Content */}
         <main className="flex-grow max-w-7xl w-full mx-auto px-6 py-8">
-          {/* Summary Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-6">
             <div className="bg-base-100 p-4 rounded-lg shadow-sm">
               <div className="text-sm text-gray-500">Tổng số nhân viên</div>
-              <div className="text-2xl font-semibold">
-                {filteredPayrolls.length}
-              </div>
+              <div className="text-2xl font-semibold">{totalItems}</div>
             </div>
             <div className="bg-base-100 p-4 rounded-lg shadow-sm">
               <div className="text-sm text-gray-500">Đã nhận lương</div>
               <div className="text-2xl font-semibold text-success">
-                {filteredPayrolls.filter((p) => p.status === "Đã nhận").length}
+                {payrolls.filter((p) => p.status === "Đã nhận").length}
               </div>
             </div>
             <div className="bg-base-100 p-4 rounded-lg shadow-sm">
               <div className="text-sm text-gray-500">Chưa nhận lương</div>
               <div className="text-2xl font-semibold text-warning">
-                {
-                  filteredPayrolls.filter((p) => p.status === "Chưa nhận")
-                    .length
-                }
+                {payrolls.filter((p) => p.status === "Chưa nhận").length}
               </div>
             </div>
           </div>
 
-          {/* Filters */}
           <div className="bg-base-100 p-4 rounded-lg shadow-sm mb-6">
             <div className="flex flex-col md:flex-row gap-4 justify-between">
-              {/* Search */}
               <div className="flex flex-1 relative">
                 <input
                   type="text"
@@ -258,7 +259,6 @@ export default function Payroll() {
                 />
               </div>
 
-              {/* Month picker */}
               <div className="flex items-center gap-2">
                 <div className="dropdown dropdown-end">
                   <label tabIndex={0} className="btn btn-outline flex gap-2">
@@ -270,6 +270,16 @@ export default function Payroll() {
                     tabIndex={0}
                     className="dropdown-content z-10 menu p-2 shadow bg-base-100 rounded-box w-52"
                   >
+                    <li>
+                      <button onClick={() => setSelectedMonth("2025-07")}>
+                        2025-07
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => setSelectedMonth("2025-06")}>
+                        2025-06
+                      </button>
+                    </li>
                     <li>
                       <button onClick={() => setSelectedMonth("2025-05")}>
                         2025-05
@@ -285,20 +295,9 @@ export default function Payroll() {
                         2025-03
                       </button>
                     </li>
-                    <li>
-                      <button onClick={() => setSelectedMonth("2025-02")}>
-                        2025-02
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setSelectedMonth("2025-01")}>
-                        2025-01
-                      </button>
-                    </li>
                   </ul>
                 </div>
 
-                {/* Department filter */}
                 <div className="dropdown dropdown-end">
                   <label tabIndex={0} className="btn btn-outline flex gap-2">
                     <Filter size={18} />
@@ -319,7 +318,7 @@ export default function Payroll() {
                       </button>
                     </li>
                     {departments.map((dept) => (
-                      <li key={dept.id}>
+                      <li key={dept.department_id}>
                         <button
                           onClick={() => setSelectedDepartment(dept.name)}
                         >
@@ -330,7 +329,6 @@ export default function Payroll() {
                   </ul>
                 </div>
 
-                {/* Status filter */}
                 <div className="dropdown dropdown-end">
                   <label tabIndex={0} className="btn btn-outline flex gap-2">
                     <span>
@@ -365,119 +363,156 @@ export default function Payroll() {
             </div>
           </div>
 
-          {/* Results */}
           <div className="bg-base-100 rounded-lg shadow overflow-x-auto">
-            <table className="table w-full">
-              <thead>
-                <tr>
-                  <th>STT</th>
-                  <th
-                    onClick={() => handleSort("employee_name")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Nhân viên
-                      <ArrowUpDown size={16} className="ml-1" />
-                    </div>
-                  </th>
-                  <th>Phòng ban</th>
-                  <th>Chức vụ</th>
-                  <th
-                    onClick={() => handleSort("base_salary")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Lương cơ bản
-                      <ArrowUpDown size={16} className="ml-1" />
-                    </div>
-                  </th>
-                  <th>Thưởng làm thêm</th>
-                  <th>Phạt</th>
-                  <th
-                    onClick={() => handleSort("total_salary")}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      Tổng thực lãnh
-                      <ArrowUpDown size={16} className="ml-1" />
-                    </div>
-                  </th>
-                  <th className="w-29">Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPayrolls.length > 0 ? (
-                  filteredPayrolls.map((payroll, index) => (
-                    <tr key={payroll.payroll_id}>
-                      <td>{index + 1}</td>
-                      <td>
-                        <div className="font-medium">
-                          {payroll.employee_name}
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <span className="loading loading-spinner loading-lg"></span>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <p className="text-error">{error}</p>
+                <button
+                  className="btn btn-sm btn-outline mt-2"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedDepartment("all");
+                    setSelectedStatus("all");
+                    setSelectedMonth(getCurrentYearMonth());
+                    setCurrentPage(1);
+                  }}
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : (
+              <>
+                <table className="table w-full">
+                  <thead>
+                    <tr>
+                      <th>STT</th>
+                      <th
+                        onClick={() => handleSort("employee_name")}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center">
+                          Nhân viên
+                          <ArrowUpDown size={16} className="ml-1" />
                         </div>
-                      </td>
-                      <td>{payroll.department}</td>
-                      <td>{payroll.position}</td>
-                      <td>{formatCurrency(payroll.base_salary)}</td>
-                      <td>{formatCurrency(payroll.overtime_bonus)}</td>
-                      <td className="text-error">
-                        {formatCurrency(payroll.late_penalty)}
-                      </td>
-                      <td className="font-semibold">
-                        {formatCurrency(payroll.total_salary)}
-                      </td>
-                      <td>
-                        <div
-                          className={`text flex ${
-                            payroll.status === "Đã nhận"
-                              ? // ? "badge-success"
-                                "text-success"
-                              : "text-warning"
-                          } gap-1`}
-                        >
-                          {payroll.status === "Đã nhận" ? (
-                            <Check size={12} />
-                          ) : (
-                            <X size={12} />
-                          )}
-                          {payroll.status}
+                      </th>
+                      <th>Phòng ban</th>
+                      <th>Chức vụ</th>
+                      <th
+                        onClick={() => handleSort("base_salary")}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center">
+                          Lương cơ bản
+                          <ArrowUpDown size={16} className="ml-1" />
                         </div>
-                      </td>
-                      <td>
-                        <div className="flex gap-2">
-                          <Link
-                            href={`/salary/payroll/${payroll.payroll_id}`}
-                            className="btn btn-sm btn-outline"
-                          >
-                            Chi tiết
-                          </Link>
+                      </th>
+                      <th>Thưởng làm thêm</th>
+                      <th>Phạt</th>
+                      <th
+                        onClick={() => handleSort("total_salary")}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center">
+                          Tổng thực lãnh
+                          <ArrowUpDown size={16} className="ml-1" />
                         </div>
-                      </td>
+                      </th>
+                      <th className="w-29">Trạng thái</th>
+                      <th>Thao tác</th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={10}>
-                      <div className="flex flex-col items-center justify-center py-8">
-                        <p className="text-gray-500 mb-2">
-                          Không tìm thấy dữ liệu phù hợp
-                        </p>
-                        <button
-                          className="btn btn-sm btn-outline"
-                          onClick={() => {
-                            setSearchQuery("");
-                            setSelectedDepartment("all");
-                            setSelectedStatus("all");
-                          }}
-                        >
-                          Xóa bộ lọc
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {payrolls.length > 0 ? (
+                      payrolls.map((payroll, index) => (
+                        <tr key={payroll.payroll_id}>
+                          <td>
+                            {(currentPage - 1) * itemsPerPage + index + 1}
+                          </td>
+                          <td>
+                            <div className="font-medium">
+                              {payroll.employee_name}
+                            </div>
+                          </td>
+                          <td>{payroll.department}</td>
+                          <td>{payroll.position}</td>
+                          <td>{formatCurrency(payroll.base_salary)}</td>
+                          <td>{formatCurrency(payroll.overtime_bonus)}</td>
+                          <td className="text-error">
+                            {formatCurrency(payroll.late_penalty)}
+                          </td>
+                          <td className="font-semibold">
+                            {formatCurrency(payroll.total_salary)}
+                          </td>
+                          <td>
+                            <div
+                              className={`text flex ${
+                                payroll.status === "Đã nhận"
+                                  ? "text-success"
+                                  : "text-warning"
+                              } gap-1`}
+                            >
+                              {payroll.status === "Đã nhận" ? (
+                                <Check size={12} />
+                              ) : (
+                                <X size={12} />
+                              )}
+                              {payroll.status}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="flex gap-2">
+                              <Link
+                                href={`/salary/payroll/${payroll.payroll_id}`}
+                                className="btn btn-sm btn-outline"
+                              >
+                                Chi tiết
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={10}>
+                          <div className="flex flex-col items-center justify-center py-8">
+                            <p className="text-gray-500 mb-2">
+                              Không tìm thấy dữ liệu phù hợp
+                            </p>
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => {
+                                setSearchQuery("");
+                                setSelectedDepartment("all");
+                                setSelectedStatus("all");
+                                setSelectedMonth(getCurrentYearMonth());
+                                setCurrentPage(1);
+                              }}
+                            >
+                              Xóa bộ lọc
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                <div className="pb-5 pl-5 pr-5">
+                  {payrolls.length > 0 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={Math.ceil(totalItems / itemsPerPage)}
+                      totalItems={totalItems}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setCurrentPage}
+                    />
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </main>
       </div>

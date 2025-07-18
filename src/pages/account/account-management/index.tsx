@@ -9,6 +9,21 @@ const AccountManagement: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-base-100 p-6">
+      <div className="breadcrumbs text-sm">
+        <ul>
+          <li>
+            <Link href="/" className="text-primary">
+              Home
+            </Link>
+          </li>
+          <li>
+            <Link href="/account/account-management" className="text-primary">
+              Tài khoản
+            </Link>
+          </li>
+        </ul>
+      </div>
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-primary">Quản lý Tài Khoản</h1>

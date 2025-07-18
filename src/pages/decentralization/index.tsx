@@ -104,10 +104,14 @@ const RolesPermissionsPage: React.FC<Props> = ({
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href="/">Trang chủ</Link>
+            <Link href="/" className="text-primary">
+              Trang chủ
+            </Link>
           </li>
           <li>
-            <Link href="/decentralization">Phân quyền</Link>
+            <Link href="/decentralization" className="text-primary">
+              Phân quyền
+            </Link>
           </li>
         </ul>
       </div>

@@ -153,18 +153,32 @@ const CreateDepartment: React.FC = () => {
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href="/">Home</Link>
+            <Link href="/" className="text-primary">
+              Home
+            </Link>
           </li>
           <li>
-            <Link href="/departments">Phòng ban</Link>
+            <Link href="/departments" className="text-primary">
+              Phòng ban
+            </Link>
           </li>
           <li>
-            <a>Tạo phòng ban</a>
+            <a className="text-primary">Tạo phòng ban</a>
           </li>
         </ul>
       </div>
+
+      <header className="bg-base-200 shadow-md rounded-sm">
+        <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-primary">
+              Tạo phòng ban mới
+            </h1>
+          </div>
+        </div>
+      </header>
+
       <div className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Tạo phòng ban mới</h1>
         <div className="card bg-base-200 p-6">
           {error && (
             <div className="alert alert-error mb-4">

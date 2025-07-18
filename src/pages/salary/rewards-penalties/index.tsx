@@ -1,38 +1,31 @@
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Filter,
   Calendar,
   ChevronDown,
   Edit,
-  Trash,
   ArrowUpDown,
   Award,
   AlertTriangle,
 } from "lucide-react";
-
-// Define types based on database schema
-type RewardPenaltyType = "Thưởng" | "Phạt";
-type RewardPenaltyStatus = "Đã duyệt" | "Chờ duyệt" | "Đã từ chối";
-
-interface RewardPenalty {
-  id: string;
-  employee_id: string;
-  employee_name: string;
-  department: string;
-  position: string;
-  type: RewardPenaltyType;
-  amount: number;
-  reason: string;
-  month: string;
-  created_at: string;
-  status: RewardPenaltyStatus;
-  approver?: string;
-}
+import AddRewardPenaltyModal from "./AddRewardPenaltyModal";
+import EditRewardPenaltyModal from "./EditRewardPenaltyModal";
+import DeleteRewardPenaltyButton from "./DeleteRewardPenaltyButton";
+import {
+  RewardPenalty,
+  Employee,
+  EmployeeApiResponse,
+  Department,
+  RewardPenaltyType,
+} from "@/types/rewards-penalties";
 
 export default function RewardsPenalties() {
-  // State for filters
+  // State for filters and data
+  const [rewardsPenalties, setRewardsPenalties] = useState<RewardPenalty[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string>(
     getCurrentYearMonth()
@@ -43,134 +36,13 @@ export default function RewardsPenalties() {
   const [sortColumn, setSortColumn] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [currentRewardPenalty, setCurrentRewardPenalty] =
+    useState<RewardPenalty | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for demonstration
-  const departments = [
-    { id: "dept1", name: "Kỹ thuật" },
-    { id: "dept2", name: "Nhân sự" },
-    { id: "dept3", name: "Kế toán" },
-    { id: "dept4", name: "Marketing" },
-  ];
-
-  const mockEmployees = [
-    {
-      id: "e1",
-      name: "Nguyễn Văn A",
-      department: "Kỹ thuật",
-      position: "Lập trình viên",
-    },
-    {
-      id: "e2",
-      name: "Trần Thị B",
-      department: "Nhân sự",
-      position: "Trưởng phòng",
-    },
-    {
-      id: "e3",
-      name: "Lê Văn C",
-      department: "Kế toán",
-      position: "Kế toán viên",
-    },
-    {
-      id: "e4",
-      name: "Phạm Thị D",
-      department: "Marketing",
-      position: "Chuyên viên",
-    },
-    {
-      id: "e5",
-      name: "Hoàng Văn E",
-      department: "Kỹ thuật",
-      position: "QA Engineer",
-    },
-  ];
-
-  const mockRewardsPenalties: RewardPenalty[] = [
-    {
-      id: "rp1",
-      employee_id: "e1",
-      employee_name: "Nguyễn Văn A",
-      department: "Kỹ thuật",
-      position: "Lập trình viên",
-      type: "Thưởng",
-      amount: 1500000,
-      reason: "Hoàn thành dự án trước hạn",
-      month: "2025-05",
-      created_at: "2025-05-02T08:30:00Z",
-      status: "Đã duyệt",
-      approver: "Hoàng Minh Quản lý",
-    },
-    {
-      id: "rp2",
-      employee_id: "e2",
-      employee_name: "Trần Thị B",
-      department: "Nhân sự",
-      position: "Trưởng phòng",
-      type: "Thưởng",
-      amount: 2000000,
-      reason: "Đạt thành tích tuyển dụng xuất sắc Q1/2025",
-      month: "2025-05",
-      created_at: "2025-05-01T10:15:00Z",
-      status: "Đã duyệt",
-      approver: "Hoàng Minh Quản lý",
-    },
-    {
-      id: "rp3",
-      employee_id: "e3",
-      employee_name: "Lê Văn C",
-      department: "Kế toán",
-      position: "Kế toán viên",
-      type: "Phạt",
-      amount: 200000,
-      reason: "Đi trễ 3 lần trong tháng",
-      month: "2025-05",
-      created_at: "2025-05-03T14:20:00Z",
-      status: "Đã duyệt",
-      approver: "Hoàng Minh Quản lý",
-    },
-    {
-      id: "rp4",
-      employee_id: "e4",
-      employee_name: "Phạm Thị D",
-      department: "Marketing",
-      position: "Chuyên viên",
-      type: "Phạt",
-      amount: 500000,
-      reason: "Không hoàn thành KPI tháng",
-      month: "2025-05",
-      created_at: "2025-05-04T09:45:00Z",
-      status: "Chờ duyệt",
-    },
-    {
-      id: "rp5",
-      employee_id: "e5",
-      employee_name: "Hoàng Văn E",
-      department: "Kỹ thuật",
-      position: "QA Engineer",
-      type: "Thưởng",
-      amount: 1000000,
-      reason: "Phát hiện và báo cáo lỗi nghiêm trọng",
-      month: "2025-05",
-      created_at: "2025-05-05T11:30:00Z",
-      status: "Chờ duyệt",
-    },
-    {
-      id: "rp6",
-      employee_id: "e1",
-      employee_name: "Nguyễn Văn A",
-      department: "Kỹ thuật",
-      position: "Lập trình viên",
-      type: "Phạt",
-      amount: 300000,
-      reason: "Không tuân thủ quy trình code review",
-      month: "2025-05",
-      created_at: "2025-05-06T13:10:00Z",
-      status: "Đã từ chối",
-      approver: "Hoàng Minh Quản lý",
-    },
-  ];
-
-  // Form state for adding new reward/penalty
+  // Form state for adding/editing reward/penalty
   const [newRewardPenalty, setNewRewardPenalty] = useState({
     employee_id: "",
     type: "Thưởng" as RewardPenaltyType,
@@ -204,60 +76,172 @@ export default function RewardsPenalties() {
     }
   }
 
-  function handleAddSubmit(e: React.FormEvent) {
+  // Fetch data from APIs
+  const fetchRewardsPenalties = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/rewards-penalties?search=${searchQuery}&month=${selectedMonth}&department_id=${
+          selectedDepartment === "all" ? "" : selectedDepartment
+        }&type=${selectedType === "all" ? "" : selectedType}&status=${
+          selectedStatus === "all" ? "" : selectedStatus
+        }`,
+        {
+          headers: { Authorization: "x your-token" },
+        }
+      );
+      if (!response.ok) throw new Error("Lỗi khi lấy danh sách thưởng/phạt");
+      const data = await response.json();
+      setRewardsPenalties(data.rewardsPenalties);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi không xác định");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch("/api/employees", {
+        headers: { Authorization: "x your-token" },
+      });
+      if (!response.ok) throw new Error("Lỗi khi lấy danh sách nhân viên");
+      const data = await response.json();
+      setEmployees(
+        data.employees.map((emp: EmployeeApiResponse) => ({
+          id: emp.employee_id,
+          name: emp.full_name,
+          department: emp.department_name,
+          position: emp.position_name,
+        }))
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await fetch("/api/departments", {
+        headers: { Authorization: "x your-token" },
+      });
+      if (!response.ok) throw new Error("Lỗi khi lấy danh sách phòng ban");
+      const data = await response.json();
+      setDepartments(data.departments);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    fetchRewardsPenalties();
+  }, [
+    searchQuery,
+    selectedMonth,
+    selectedDepartment,
+    selectedType,
+    selectedStatus,
+  ]);
+
+  // Handle add/edit/delete
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real application, you would send this to your API
-    console.log("Submitting new reward/penalty:", newRewardPenalty);
-    setShowAddModal(false);
-    // Reset form
-    setNewRewardPenalty({
-      employee_id: "",
-      type: "Thưởng",
-      amount: 0,
-      reason: "",
-      month: getCurrentYearMonth(),
-    });
-  }
+    try {
+      const response = await fetch("/api/rewards-penalties", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "x your-token",
+        },
+        body: JSON.stringify(newRewardPenalty),
+      });
+      if (!response.ok) throw new Error("Lỗi khi thêm thưởng/phạt");
+      setShowAddModal(false);
+      setNewRewardPenalty({
+        employee_id: "",
+        type: "Thưởng",
+        amount: 0,
+        reason: "",
+        month: getCurrentYearMonth(),
+      });
+      fetchRewardsPenalties();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi không xác định");
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentRewardPenalty) return;
+    try {
+      const response = await fetch("/api/rewards-penalties", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "x your-token",
+        },
+        body: JSON.stringify({
+          ...newRewardPenalty,
+          id: currentRewardPenalty.id,
+        }),
+      });
+      if (!response.ok) throw new Error("Lỗi khi cập nhật thưởng/phạt");
+      setShowEditModal(false);
+      setCurrentRewardPenalty(null);
+      setNewRewardPenalty({
+        employee_id: "",
+        type: "Thưởng",
+        amount: 0,
+        reason: "",
+        month: getCurrentYearMonth(),
+      });
+      fetchRewardsPenalties();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi không xác định");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch("/api/rewards-penalties", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "x your-token",
+        },
+        body: JSON.stringify({ id }),
+      });
+      if (!response.ok) throw new Error("Lỗi khi xóa thưởng/phạt");
+      fetchRewardsPenalties();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi không xác định");
+    }
+  };
 
   // Filter and sort rewards/penalties
-  const filteredRewardsPenalties = mockRewardsPenalties
-    .filter((item) => {
-      const matchesSearch =
-        item.employee_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.reason.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesDepartment =
-        selectedDepartment === "all" || item.department === selectedDepartment;
-      const matchesType = selectedType === "all" || item.type === selectedType;
-      const matchesStatus =
-        selectedStatus === "all" || item.status === selectedStatus;
-      const matchesMonth = item.month === selectedMonth;
+  const filteredRewardsPenalties = rewardsPenalties.sort((a, b) => {
+    if (sortColumn === "employee_name") {
+      return sortDirection === "asc"
+        ? a.employee_name.localeCompare(b.employee_name)
+        : b.employee_name.localeCompare(a.employee_name);
+    } else if (sortColumn === "amount") {
+      return sortDirection === "asc"
+        ? a.amount - b.amount
+        : b.amount - a.amount;
+    } else if (sortColumn === "created_at") {
+      return sortDirection === "asc"
+        ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    return 0;
+  });
 
-      return (
-        matchesSearch &&
-        matchesDepartment &&
-        matchesType &&
-        matchesStatus &&
-        matchesMonth
-      );
-    })
-    .sort((a, b) => {
-      if (sortColumn === "employee_name") {
-        return sortDirection === "asc"
-          ? a.employee_name.localeCompare(b.employee_name)
-          : b.employee_name.localeCompare(a.employee_name);
-      } else if (sortColumn === "amount") {
-        return sortDirection === "asc"
-          ? a.amount - b.amount
-          : b.amount - a.amount;
-      } else if (sortColumn === "created_at") {
-        return sortDirection === "asc"
-          ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-      return 0;
-    });
-
-  // Calculate total rewards and penalties for the current filtered view
+  // Calculate total rewards and penalties
   const totalRewards = filteredRewardsPenalties
     .filter((item) => item.type === "Thưởng" && item.status === "Đã duyệt")
     .reduce((sum, item) => sum + item.amount, 0);
@@ -271,10 +255,14 @@ export default function RewardsPenalties() {
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href={"/"}>Trang chủ</Link>
+            <Link href={"/"} className="text-primary">
+              Trang chủ
+            </Link>
           </li>
           <li>
-            <Link href={"/salary/rewards-penalties"}>Thưởng | Phạt</Link>
+            <Link href={"/salary/rewards-penalties"} className="text-primary">
+              Thưởng | Phạt
+            </Link>
           </li>
         </ul>
       </div>
@@ -299,6 +287,11 @@ export default function RewardsPenalties() {
 
         {/* Main Content */}
         <main className="flex-grow max-w-7xl w-full mx-auto px-6 py-8">
+          {error && (
+            <div className="alert alert-error mb-4">
+              <span>{error}</span>
+            </div>
+          )}
           {/* Filters */}
           <div className="bg-base-100 p-4 rounded-lg shadow-sm mb-6">
             <div className="flex flex-col md:flex-row gap-4 justify-between">
@@ -322,7 +315,6 @@ export default function RewardsPenalties() {
                     </g>
                   </svg>
                   <input
-                    required
                     type="text"
                     placeholder="Tìm kiếm theo tên nhân viên hoặc lý do..."
                     value={searchQuery}
@@ -337,38 +329,30 @@ export default function RewardsPenalties() {
                 <div className="dropdown dropdown-end">
                   <label tabIndex={0} className="btn btn-outline flex gap-2">
                     <Calendar size={18} />
-                    <span>{selectedMonth}</span>
+                    <span>Tháng</span>
                     <ChevronDown size={16} />
                   </label>
                   <ul
                     tabIndex={0}
                     className="dropdown-content z-10 menu p-2 shadow bg-base-100 rounded-box w-52"
                   >
-                    <li>
-                      <button onClick={() => setSelectedMonth("2025-05")}>
-                        2025-05
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setSelectedMonth("2025-04")}>
-                        2025-04
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setSelectedMonth("2025-03")}>
-                        2025-03
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setSelectedMonth("2025-02")}>
-                        2025-02
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setSelectedMonth("2025-01")}>
-                        2025-01
-                      </button>
-                    </li>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const month = (i + 1).toString().padStart(2, "0");
+                      const label = `Tháng ${month}`;
+                      return (
+                        <li key={month}>
+                          <button
+                            onClick={() =>
+                              setSelectedMonth(
+                                `${new Date().getFullYear()}-${month}`
+                              )
+                            }
+                          >
+                            {label}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
 
@@ -379,7 +363,8 @@ export default function RewardsPenalties() {
                     <span>
                       {selectedDepartment === "all"
                         ? "Tất cả phòng ban"
-                        : selectedDepartment}
+                        : departments.find((d) => d.id === selectedDepartment)
+                            ?.name || "Tất cả phòng ban"}
                     </span>
                     <ChevronDown size={16} />
                   </label>
@@ -394,9 +379,7 @@ export default function RewardsPenalties() {
                     </li>
                     {departments.map((dept) => (
                       <li key={dept.id}>
-                        <button
-                          onClick={() => setSelectedDepartment(dept.name)}
-                        >
+                        <button onClick={() => setSelectedDepartment(dept.id)}>
                           {dept.name}
                         </button>
                       </li>
@@ -514,8 +497,7 @@ export default function RewardsPenalties() {
                       className="cursor-pointer"
                     >
                       <div className="flex items-center">
-                        Nhân viên
-                        <ArrowUpDown size={16} className="ml-1" />
+                        Nhân viên <ArrowUpDown size={16} className="ml-1" />
                       </div>
                     </th>
                     <th>Phòng ban</th>
@@ -525,8 +507,7 @@ export default function RewardsPenalties() {
                       className="cursor-pointer"
                     >
                       <div className="flex items-center">
-                        Số tiền
-                        <ArrowUpDown size={16} className="ml-1" />
+                        Số tiền <ArrowUpDown size={16} className="ml-1" />
                       </div>
                     </th>
                     <th>Lý do</th>
@@ -535,8 +516,7 @@ export default function RewardsPenalties() {
                       className="cursor-pointer"
                     >
                       <div className="flex items-center">
-                        Ngày tạo
-                        <ArrowUpDown size={16} className="ml-1" />
+                        Ngày tạo <ArrowUpDown size={16} className="ml-1" />
                       </div>
                     </th>
                     <th>Trạng thái</th>
@@ -545,7 +525,13 @@ export default function RewardsPenalties() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRewardsPenalties.length > 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={10} className="text-center">
+                        Đang tải...
+                      </td>
+                    </tr>
+                  ) : filteredRewardsPenalties.length > 0 ? (
                     filteredRewardsPenalties.map((item, index) => (
                       <tr key={item.id}>
                         <td>{index + 1}</td>
@@ -554,10 +540,10 @@ export default function RewardsPenalties() {
                             {item.employee_name}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {item.position}
+                            {item.position || "-"}
                           </div>
                         </td>
-                        <td>{item.department}</td>
+                        <td>{item.department || "-"}</td>
                         <td>
                           <div
                             className={`badge ${
@@ -612,12 +598,26 @@ export default function RewardsPenalties() {
                         <td>{item.approver || "-"}</td>
                         <td>
                           <div className="flex gap-1">
-                            <button className="btn btn-sm btn-outline btn-square">
+                            <button
+                              className="btn btn-sm btn-outline btn-square"
+                              onClick={() => {
+                                setCurrentRewardPenalty(item);
+                                setNewRewardPenalty({
+                                  employee_id: item.employee_id,
+                                  type: item.type,
+                                  amount: item.amount,
+                                  reason: item.reason,
+                                  month: item.month,
+                                });
+                                setShowEditModal(true);
+                              }}
+                            >
                               <Edit size={16} />
                             </button>
-                            <button className="btn btn-sm btn-outline btn-square btn-error">
-                              <Trash size={16} />
-                            </button>
+                            <DeleteRewardPenaltyButton
+                              id={item.id}
+                              onDelete={handleDelete}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -633,6 +633,7 @@ export default function RewardsPenalties() {
                             className="btn btn-sm btn-outline"
                             onClick={() => {
                               setSearchQuery("");
+                              setSelectedMonth(getCurrentYearMonth());
                               setSelectedDepartment("all");
                               setSelectedType("all");
                               setSelectedStatus("all");
@@ -651,134 +652,24 @@ export default function RewardsPenalties() {
         </main>
       </div>
 
-      {/* Add New Modal */}
-      {showAddModal && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">Thêm Thưởng/Phạt Mới</h3>
-            <form onSubmit={handleAddSubmit}>
-              <div className="form-control mb-3">
-                <label className="label">
-                  <span className="label-text">Nhân viên</span>
-                </label>
-                <select
-                  className="select select-bordered w-full"
-                  value={newRewardPenalty.employee_id}
-                  onChange={(e) =>
-                    setNewRewardPenalty({
-                      ...newRewardPenalty,
-                      employee_id: e.target.value,
-                    })
-                  }
-                  required
-                >
-                  <option value="" disabled>
-                    Chọn nhân viên
-                  </option>
-                  {mockEmployees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} - {emp.department} - {emp.position}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      <AddRewardPenaltyModal
+        show={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        employees={employees}
+        newRewardPenalty={newRewardPenalty}
+        setNewRewardPenalty={setNewRewardPenalty}
+        onSubmit={handleAddSubmit}
+      />
 
-              <div className="form-control mb-3">
-                <label className="label">
-                  <span className="label-text">Loại</span>
-                </label>
-                <select
-                  className="select select-bordered w-full"
-                  value={newRewardPenalty.type}
-                  onChange={(e) =>
-                    setNewRewardPenalty({
-                      ...newRewardPenalty,
-                      type: e.target.value as RewardPenaltyType,
-                    })
-                  }
-                  required
-                >
-                  <option value="Thưởng">Thưởng</option>
-                  <option value="Phạt">Phạt</option>
-                </select>
-              </div>
-
-              <div className="form-control mb-3">
-                <label className="label">
-                  <span className="label-text">Số tiền (VNĐ)</span>
-                </label>
-                <input
-                  type="number"
-                  className="input input-bordered w-full"
-                  placeholder="Nhập số tiền"
-                  value={newRewardPenalty.amount}
-                  onChange={(e) =>
-                    setNewRewardPenalty({
-                      ...newRewardPenalty,
-                      amount: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div className="form-control mb-3">
-                <label className="label">
-                  <span className="label-text">Lý do</span>
-                </label>
-                <textarea
-                  className="textarea textarea-bordered w-full"
-                  placeholder="Nhập lý do thưởng/phạt"
-                  value={newRewardPenalty.reason}
-                  onChange={(e) =>
-                    setNewRewardPenalty({
-                      ...newRewardPenalty,
-                      reason: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="form-control mb-3">
-                <label className="label">
-                  <span className="label-text">Tháng áp dụng</span>
-                </label>
-                <input
-                  type="month"
-                  className="input input-bordered w-full"
-                  value={newRewardPenalty.month}
-                  onChange={(e) =>
-                    setNewRewardPenalty({
-                      ...newRewardPenalty,
-                      month: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="modal-action">
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  Hủy
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Lưu
-                </button>
-              </div>
-            </form>
-          </div>
-          <div
-            className="modal-backdrop"
-            onClick={() => setShowAddModal(false)}
-          ></div>
-        </div>
-      )}
+      <EditRewardPenaltyModal
+        show={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        employees={employees}
+        currentRewardPenalty={currentRewardPenalty}
+        newRewardPenalty={newRewardPenalty}
+        setNewRewardPenalty={setNewRewardPenalty}
+        onSubmit={handleEditSubmit}
+      />
     </div>
   );
 }

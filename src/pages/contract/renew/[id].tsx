@@ -7,7 +7,13 @@ interface Contract {
   employee: {
     full_name: string;
     email: string;
+    phone_number: string | null;
+    department: { name: string } | null;
+    position: { name: string } | null;
   };
+  start_date: string;
+  end_date: string;
+  status: string;
 }
 
 interface User {
@@ -22,64 +28,91 @@ export default function RenewContract() {
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState("");
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Kiểm tra quyền Admin/HR
   useEffect(() => {
     const userData = localStorage.getItem("user");
-    if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData) as User;
-        setUser(parsedUser);
-        if (!parsedUser.roles.some((role) => ["Admin", "HR"].includes(role))) {
-          router.push("/error/forbidden"); // Sửa đường dẫn
-        }
-      } catch (error: unknown) {
-        console.error("Lỗi phân tích user:", error);
-        router.push("/auths/login");
+    const token = localStorage.getItem("token");
+    if (!userData || !token) {
+      router.push("/auths/login");
+      return;
+    }
+
+    try {
+      const parsedUser = JSON.parse(userData) as User;
+      setUser(parsedUser);
+      if (!parsedUser.roles.some((role) => ["Admin", "HR"].includes(role))) {
+        router.push("/error/forbidden");
       }
-    } else {
+    } catch (error: unknown) {
+      console.error("Lỗi phân tích user:", error);
       router.push("/auths/login");
     }
   }, [router]);
 
+  // Tải thông tin hợp đồng
   useEffect(() => {
-    if (id && user) {
-      fetch(`/api/contracts/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Lỗi tải hợp đồng");
-          return res.json();
-        })
-        .then((data) => {
-          setContract(data);
-          setStartDate(new Date().toISOString().split("T")[0]);
-          setEndDate(
-            new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-              .toISOString()
-              .split("T")[0]
-          );
-        })
-        .catch((error: unknown) => {
-          console.error("Lỗi tải hợp đồng:", error);
-          setContract(null);
-          setError("Không thể tải thông tin hợp đồng");
+    if (!id || !user) return;
+
+    const fetchContract = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/contracts/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         });
-    }
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || `Lỗi tải hợp đồng: ${response.statusText}`
+          );
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.contract) {
+          throw new Error("Dữ liệu hợp đồng không hợp lệ");
+        }
+
+        setContract(data.contract); // Lấy contract từ data.contract
+        setStartDate(new Date().toISOString().split("T")[0]);
+        setEndDate(
+          new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+            .toISOString()
+            .split("T")[0]
+        );
+      } catch (error: unknown) {
+        console.error("Lỗi tải hợp đồng:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Không thể tải thông tin hợp đồng"
+        );
+        setContract(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContract();
   }, [id, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!user || !user.roles.some((role) => ["Admin", "HR"].includes(role))) {
-      router.push("/error/forbidden"); // Sửa đường dẫn
+      router.push("/error/forbidden");
       return;
     }
 
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+      }
+
       const response = await fetch("/api/contracts/renew", {
         method: "POST",
         headers: {
@@ -101,12 +134,26 @@ export default function RenewContract() {
       }
     } catch (error: unknown) {
       console.error("Lỗi gia hạn:", error);
-      setError("Lỗi hệ thống, vui lòng thử lại");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Lỗi hệ thống, vui lòng thử lại"
+      );
     }
   };
 
+  if (isLoading) {
+    return <div className="text-center p-4">Đang tải...</div>;
+  }
+
   if (!user || !contract) {
-    return <div>Đang tải...</div>;
+    return (
+      <div className="bg-base min-h-screen p-6">
+        <div className="alert alert-error">
+          {error || "Không thể tải thông tin hợp đồng. Vui lòng thử lại."}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -135,6 +182,12 @@ export default function RenewContract() {
         </div>
       </header>
 
+      {error && (
+        <div className="alert alert-error mb-6">
+          <span>{error}</span>
+        </div>
+      )}
+
       <div className="card bg-base-200 shadow-md">
         <div className="card-body">
           <h2 className="card-title">Thông tin nhân viên</h2>
@@ -144,9 +197,17 @@ export default function RenewContract() {
           <p>
             <strong>Email:</strong> {contract.employee.email}
           </p>
+          <p>
+            <strong>Phòng ban:</strong>{" "}
+            {contract.employee.department?.name || "N/A"}
+          </p>
+          <p>
+            <strong>Chức vụ:</strong>{" "}
+            {contract.employee.position?.name || "N/A"}
+          </p>
 
           <form onSubmit={handleSubmit} className="mt-3">
-            <div className="form-control">
+            <div className="form-control grid gap-1">
               <label className="label">
                 <span className="label-text">Ngày bắt đầu hợp đồng mới</span>
               </label>
@@ -158,7 +219,7 @@ export default function RenewContract() {
                 required
               />
             </div>
-            <div className="form-control mt-4">
+            <div className="form-control mt-4 grid gap-1">
               <label className="label">
                 <span className="label-text">Ngày kết thúc hợp đồng mới</span>
               </label>
@@ -170,7 +231,6 @@ export default function RenewContract() {
                 required
               />
             </div>
-            {error && <div className="alert alert-error mt-4">{error}</div>}
             <div className="mt-6 flex gap-4">
               <button type="submit" className="btn btn-primary">
                 Xác nhận gia hạn

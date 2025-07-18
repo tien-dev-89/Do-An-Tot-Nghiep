@@ -58,6 +58,7 @@ export default function SendNotifications() {
   const [showRecipientDropdown, setShowRecipientDropdown] =
     useState<boolean>(false);
   const [selectedRecipients, setSelectedRecipients] = useState<Employee[]>([]);
+  const [selectAll, setSelectAll] = useState<boolean>(false);
   const [showNotification, setShowNotification] = useState<boolean>(false);
   const [notificationStatus, setNotificationStatus] = useState<
     "success" | "error" | null
@@ -100,7 +101,7 @@ export default function SendNotifications() {
       try {
         setIsLoading(true);
         const response = await fetch("/api/departments", {
-          headers: { Authorization: `x ${token}` }, // Sử dụng định dạng "x <token>"
+          headers: { Authorization: `x ${token}` },
         });
         if (!response.ok) {
           if (response.status === 401) {
@@ -130,7 +131,7 @@ export default function SendNotifications() {
     const fetchEmployees = async () => {
       try {
         const response = await fetch("/api/employees", {
-          headers: { Authorization: `x ${token}` }, // Sử dụng định dạng "x <token>"
+          headers: { Authorization: `x ${token}` },
         });
         if (!response.ok) {
           if (response.status === 401) {
@@ -210,6 +211,24 @@ export default function SendNotifications() {
     }
   };
 
+  const handleSelectAll = () => {
+    if (!selectAll) {
+      setSelectedRecipients([...employees]);
+      setNotification({
+        ...notification,
+        recipients: employees.map((emp) => emp.employee_id),
+      });
+      setSelectAll(true);
+    } else {
+      setSelectedRecipients([]);
+      setNotification({
+        ...notification,
+        recipients: [],
+      });
+      setSelectAll(false);
+    }
+  };
+
   const removeRecipient = (employeeId: string) => {
     setSelectedRecipients(
       selectedRecipients.filter((emp) => emp.employee_id !== employeeId)
@@ -218,6 +237,9 @@ export default function SendNotifications() {
       ...notification,
       recipients: notification.recipients.filter((id) => id !== employeeId),
     });
+    if (selectAll) {
+      setSelectAll(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -235,7 +257,7 @@ export default function SendNotifications() {
         const response = await fetch("/api/notifications", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`, // API notifications yêu cầu "Bearer"
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -271,6 +293,7 @@ export default function SendNotifications() {
         contract_id: undefined,
       });
       setSelectedRecipients([]);
+      setSelectAll(false);
       setTimeout(() => setShowNotification(false), 3000);
       toast.success("Đã gửi thông báo thành công!");
     } catch (error: unknown) {
@@ -293,10 +316,15 @@ export default function SendNotifications() {
           <div className="breadcrumbs text-sm">
             <ul>
               <li>
-                <Link href={"/"}>Trang chủ</Link>
+                <Link href="/" className="text-primary">
+                  Trang chủ
+                </Link>
               </li>
               <li>
-                <Link href={"/announcement/send-notifications"}>
+                <Link
+                  href="/announcement/send-notifications"
+                  className="text-primary"
+                >
                   Gửi thông báo
                 </Link>
               </li>
@@ -417,7 +445,21 @@ export default function SendNotifications() {
                         setShowRecipientDropdown(!showRecipientDropdown)
                       }
                     >
-                      {selectedRecipients.length > 0 ? (
+                      {selectAll ? (
+                        <div className="badge badge-primary gap-2">
+                          <User size={14} />
+                          Tất cả nhân viên
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectAll();
+                            }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : selectedRecipients.length > 0 ? (
                         selectedRecipients.map((recipient) => (
                           <div
                             key={recipient.employee_id}
@@ -479,6 +521,19 @@ export default function SendNotifications() {
                           </div>
                         </div>
                         <div className="max-h-60 overflow-y-auto">
+                          <div
+                            className="p-2 hover:bg-base-200 cursor-pointer flex items-center gap-2 border-b"
+                            onClick={handleSelectAll}
+                          >
+                            <User size={16} />
+                            <span>Tất cả nhân viên</span>
+                            {selectAll && (
+                              <CheckCircle
+                                size={16}
+                                className="ml-auto text-success"
+                              />
+                            )}
+                          </div>
                           {filteredEmployees.length > 0 ? (
                             <ul>
                               {filteredEmployees.map((employee) => (

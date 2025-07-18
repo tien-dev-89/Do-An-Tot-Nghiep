@@ -316,13 +316,17 @@ export default function DetailAccount() {
         <div className="breadcrumbs text-sm">
           <ul>
             <li>
-              <Link href="/">Trang chủ</Link>
+              <Link href="/" className="text-primary">
+                Trang chủ
+              </Link>
             </li>
             <li>
-              <Link href="/account/account-management">Quản lý Tài Khoản</Link>
+              <Link href="/account/account-management" className="text-primary">
+                Quản lý Tài Khoản
+              </Link>
             </li>
             <li>
-              <span>Chi Tiết Tài Khoản</span>
+              <span className="text-primary">Chi Tiết Tài Khoản</span>
             </li>
           </ul>
         </div>

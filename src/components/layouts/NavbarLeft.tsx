@@ -299,38 +299,6 @@ const NavbarLeft: React.FC = () => {
           </div>
 
           {/* Tài khoản */}
-          {/* <div className="collapse collapse-arrow rounded-md">
-            <input
-              type="checkbox"
-              checked={isAccount}
-              onChange={() => setIsAccount(!isAccount)}
-            />
-            <label className="collapse-title font-medium flex items-center gap-5 p-4 hover:bg-blue-300 hover:text-white cursor-pointer transition-colors">
-              <Settings className="w-5 h-5" />
-              Tài khoản
-            </label>
-            <div className="collapse-content">
-              <ul className="menu menu-sm relative w-[260px]">
-                <li>
-                  <Link
-                    href="/account/account-management"
-                    className={`p-3 text-sm flex font-medium hover:bg-blue-200 rounded-md transition-colors ${
-                      pathname === "/account/account-management"
-                        ? "bg-blue-200"
-                        : ""
-                    }`}
-                    aria-current={
-                      pathname === "/account/account-management"
-                        ? "page"
-                        : undefined
-                    }
-                  >
-                    Quản lý tài khoản
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div> */}
           <div
             className={`p-4 flex font-medium rounded-md hover:bg-blue-300 hover:text-white transition-colors ${
               pathname === "/account/account-management"

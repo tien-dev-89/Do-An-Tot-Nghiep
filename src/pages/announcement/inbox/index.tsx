@@ -323,10 +323,14 @@ export default function Inbox() {
           <div className="breadcrumbs text-sm">
             <ul>
               <li>
-                <Link href={"/"}>Trang chủ</Link>
+                <Link href={"/"} className="text-primary">
+                  Trang chủ
+                </Link>
               </li>
               <li>
-                <Link href={"/announcement/inbox"}>Hộp thư đến</Link>
+                <Link href={"/announcement/inbox"} className="text-primary">
+                  Hộp thư đến
+                </Link>
               </li>
             </ul>
           </div>

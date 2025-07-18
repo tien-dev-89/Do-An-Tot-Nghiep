@@ -1,4 +1,4 @@
-version: "3.8"
+# version: "3.8"
 services:
   app:
     build:
@@ -8,6 +8,9 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - FRONTEND_URL=http://localhost:3000
+      - GMAIL_USER=${GMAIL_USER}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
     depends_on:
       - db
     volumes:

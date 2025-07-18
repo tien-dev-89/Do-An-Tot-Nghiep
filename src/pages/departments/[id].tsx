@@ -174,17 +174,31 @@ const DepartmentDetail: React.FC = () => {
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href="/">Home</Link>
+            <Link href="/" className="text-primary">
+              Home
+            </Link>
           </li>
           <li>
-            <Link href="/departments">Phòng ban</Link>
+            <Link href="/departments" className="text-primary">
+              Phòng ban
+            </Link>
           </li>
           <li>
-            <a>{department.name}</a>
+            <a className="text-primary">{department.name}</a>
           </li>
         </ul>
       </div>
-      <h1 className="text-2xl font-bold mb-6">{department.name}</h1>
+
+      <header className="bg-base-200 shadow-md rounded-sm">
+        <div className="max-w-7xl mx-auto py-4 px-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-primary">
+              {department.name}
+            </h1>
+          </div>
+        </div>
+      </header>
+
       <div className="tabs mb-6">
         <a
           className={`tab tab-lifted ${

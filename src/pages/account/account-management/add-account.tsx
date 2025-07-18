@@ -78,7 +78,7 @@ export default function AddAccount() {
         });
         toast.error(data.error || "Không tìm thấy nhân viên");
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Lỗi khi tìm nhân viên:", error);
       setEmployee(null);
       setEmailSuggestions([]);
@@ -110,12 +110,19 @@ export default function AddAccount() {
     fullName: string,
     birthDate: string | null
   ): string => {
-    if (!birthDate) return fullName.replace(/\s/g, "") + "01011990";
+    // Remove diacritics and spaces from full name
+    const cleanFullName = fullName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "");
+
+    // Handle birth date or default to 01011990
+    if (!birthDate) return cleanFullName + "01011990";
     const date = new Date(birthDate);
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear().toString();
-    return fullName.replace(/\s/g, "") + day + month + year;
+    return cleanFullName + day + month + year;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -154,40 +161,20 @@ export default function AddAccount() {
             to_email: employee.email,
             subject: "Chào mừng bạn đến với Hệ thống HRM!",
             body: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-                <div style="text-align: center;">
-                  <img src="https://yourcompany.com/logo.png" alt="Company Logo" style="max-width: 150px;" />
-                </div>
-                <h2 style="color: #1a73e8; text-align: center;">Chào mừng bạn đến với Hệ thống HRM!</h2>
-                <p>Xin chào ${
-                  employee.full_name || employee.email.split("@")[0]
-                },</p>
-                <p>Tài khoản của bạn đã được tạo thành công. Dưới đây là thông tin đăng nhập:</p>
-                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                  <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">Tài khoản:</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${
-                      employee.email.split("@")[0]
-                    }</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">Mật khẩu tạm:</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${password}</td>
-                  </tr>
-                </table>
-                <p>Vui lòng đăng nhập và đổi mật khẩu ngay lần đầu sử dụng để đảm bảo an toàn.</p>
-                <div style="text-align: center; margin: 20px 0;">
-                  <a href="http://localhost:3000/auths/login" style="background-color: #1a73e8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Đăng nhập ngay</a>
-                </div>
-                <p>Nếu bạn gặp khó khăn, vui lòng liên hệ bộ phận IT tại <a href="mailto:support@yourcompany.com">support@yourcompany.com</a>.</p>
-                <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;" />
-                <p style="font-size: 12px; color: #777; text-align: center;">
-                  © 2025 Công ty Staffly. Mọi quyền được bảo lưu.<br />
-                  Địa chỉ: 123 Đường ABC, TP. HCM, Việt Nam
-                </p>
-              </div>
+              Xin chào ${employee.full_name || employee.email.split("@")[0]}
+
+              Tài khoản của bạn đã được tạo thành công. Dưới đây là thông tin đăng nhập.
+
+              Tài khoản: ${employee.email.split("@")[0]}
+              Mật khẩu tạm: ${password}
+                
+              Đăng nhập ngay: http://localhost:3000/auths/login
+              
+              Vui lòng đăng nhập và đổi mật khẩu ngay lần đầu sử dụng để đảm bảo an toàn.
+                
+              Nếu bạn gặp khó khăn, vui lòng liên hệ bộ phận IT.
             `,
-            is_html: true, // Thêm trường để báo worker dùng HTML
+            is_html: true,
           }),
         });
         const emailResult = await emailResponse.json();
@@ -276,13 +263,11 @@ export default function AddAccount() {
       </div>
 
       <div className="bg-base-100 px-6 py-4 border-b">
-        <h1 className="text-2xl font-bold text-primary">Quản lý Tài Khoản</h1>
+        <h1 className="text-2xl font-bold text-primary">Thêm tài khoản mới</h1>
       </div>
 
       <div className="px-6 py-6 flex-grow">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-3xl font-semibold mb-6">Thêm tài khoản mới</h2>
-
           {loading ? (
             <div className="text-center p-4">
               <span className="loading loading-spinner loading-md"></span> Đang
@@ -331,7 +316,7 @@ export default function AddAccount() {
 
                   {employee ? (
                     <>
-                      <div className="form-control">
+                      <div className="form-control grid gap-1">
                         <label className="label">
                           <span className="label-text font-medium">
                             Tên đăng nhập
@@ -344,7 +329,7 @@ export default function AddAccount() {
                         </div>
                       </div>
 
-                      <div className="form-control">
+                      <div className="form-control grid gap-1">
                         <label className="label">
                           <span className="label-text font-medium">
                             Họ và tên
@@ -355,7 +340,7 @@ export default function AddAccount() {
                         </div>
                       </div>
 
-                      <div className="form-control">
+                      <div className="form-control grid gap-1">
                         <label className="label">
                           <span className="label-text font-medium">Tuổi</span>
                         </label>
@@ -364,7 +349,7 @@ export default function AddAccount() {
                         </div>
                       </div>
 
-                      <div className="form-control">
+                      <div className="form-control grid gap-1">
                         <label className="label">
                           <span className="label-text font-medium">
                             Giới tính
@@ -391,7 +376,7 @@ export default function AddAccount() {
 
                   {employee ? (
                     <>
-                      <div className="form-control">
+                      <div className="form-control grid gap-2 justify-center">
                         <label className="label">
                           <span className="label-text font-medium">
                             Ảnh đại diện
@@ -418,7 +403,7 @@ export default function AddAccount() {
                         </div>
                       </div>
 
-                      <div className="form-control">
+                      <div className="form-control grid gap-1">
                         <label className="label">
                           <span className="label-text font-medium">
                             Phòng ban
@@ -429,7 +414,7 @@ export default function AddAccount() {
                         </div>
                       </div>
 
-                      <div className="form-control">
+                      <div className="form-control grid gap-1">
                         <label className="label">
                           <span className="label-text font-medium">
                             Chức vụ

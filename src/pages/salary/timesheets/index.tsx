@@ -1,283 +1,265 @@
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
-  DownloadCloud,
-  CalendarCheck,
   ArrowUpDown,
+  PlusCircle,
+  Edit2,
 } from "lucide-react";
+import { format } from "date-fns";
+import ManualAttendanceModal from "@/components/modals/ManualAttendanceModal";
+import EditAttendanceModal from "./EditAttendanceModal";
+import { DeleteAttendanceModal } from "./DeleteAttendanceModal"; // Thêm import
+import { AttendanceRecord, Employee, Shift } from "@/types/salary";
 
-// Định nghĩa các kiểu dữ liệu dựa trên cơ sở dữ liệu
-interface AttendanceRecord {
-  attendance_id: string;
-  employee_id: string;
-  employee_name?: string;
-  date: string;
-  clock_in_time: string;
-  clock_out_time: string;
-  shift_id: string | null;
-  shift_name?: string;
-  late_minutes: number;
-  early_leave_minutes: number;
-  overtime_hours: number;
-  created_at: string;
-  updated_at: string;
-  status?: "Đúng giờ" | "Đi muộn" | "Về sớm" | "Đi muộn và về sớm" | "Vắng mặt";
+interface AttendanceResponse {
+  attendanceRecords: (AttendanceRecord & {
+    employee_name: string | null;
+    shift_name: string | null;
+    status: string;
+  })[];
+  total: number;
+  stats: {
+    all: number;
+    onTime: number;
+    late: number;
+    earlyLeave: number;
+    lateAndEarly: number;
+    absent: number;
+  };
 }
 
-interface Employee {
-  employee_id: string;
-  full_name: string;
-  department_id: string;
-  department_name?: string;
+interface EmployeesResponse {
+  employees: Employee[];
+  total: number;
 }
 
-interface Shift {
-  shift_id: string;
-  name: string;
-  start_time: string;
-  end_time: string;
-}
-
-// Dữ liệu mẫu cho demo
-const mockEmployees: Employee[] = [
-  {
-    employee_id: "E001",
-    full_name: "Nguyễn Văn A",
-    department_id: "D001",
-    department_name: "Kỹ thuật",
-  },
-  {
-    employee_id: "E002",
-    full_name: "Trần Thị B",
-    department_id: "D002",
-    department_name: "Nhân sự",
-  },
-  {
-    employee_id: "E003",
-    full_name: "Lê Văn C",
-    department_id: "D001",
-    department_name: "Kỹ thuật",
-  },
-  {
-    employee_id: "E004",
-    full_name: "Phạm Thị D",
-    department_id: "D003",
-    department_name: "Kinh doanh",
-  },
-  {
-    employee_id: "E005",
-    full_name: "Hoàng Văn E",
-    department_id: "D003",
-    department_name: "Kinh doanh",
-  },
-];
-
-const mockShifts: Shift[] = [
-  { shift_id: "S001", name: "Ca sáng", start_time: "08:00", end_time: "12:00" },
-  {
-    shift_id: "S002",
-    name: "Ca chiều",
-    start_time: "13:00",
-    end_time: "17:00",
-  },
-  { shift_id: "S003", name: "Ca đêm", start_time: "18:00", end_time: "22:00" },
-  {
-    shift_id: "S004",
-    name: "Ca hành chính",
-    start_time: "08:00",
-    end_time: "17:00",
-  },
-];
-
-// Tạo dữ liệu mẫu cho bảng chấm công
-const generateMockAttendanceData = (): AttendanceRecord[] => {
-  const currentDate = new Date();
-  const records: AttendanceRecord[] = [];
-
-  // Tạo bản ghi cho 30 ngày gần đây
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(currentDate.getDate() - i);
-
-    // Thêm bản ghi cho mỗi nhân viên
-    mockEmployees.forEach((employee) => {
-      // Bỏ qua ngày cuối tuần (thứ 7, chủ nhật)
-      const dayOfWeek = date.getDay();
-      if (dayOfWeek === 0 || dayOfWeek === 6) return;
-
-      // Lấy random ca làm việc
-      const shift = mockShifts[Math.floor(Math.random() * mockShifts.length)];
-
-      // Tạo ngẫu nhiên thời gian vào và ra
-      const isLate = Math.random() < 0.2; // 20% trường hợp đi muộn
-      const isEarlyLeave = Math.random() < 0.2; // 20% trường hợp về sớm
-      const isAbsent = Math.random() < 0.05; // 5% trường hợp vắng mặt
-
-      if (isAbsent) {
-        // Nếu vắng mặt, không có giờ vào/ra
-        records.push({
-          attendance_id: `A${Date.now()}${records.length}`,
-          employee_id: employee.employee_id,
-          employee_name: employee.full_name,
-          date: date.toISOString().split("T")[0],
-          clock_in_time: "",
-          clock_out_time: "",
-          shift_id: shift.shift_id,
-          shift_name: shift.name,
-          late_minutes: 0,
-          early_leave_minutes: 0,
-          overtime_hours: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          status: "Vắng mặt",
-        });
-        return;
-      }
-
-      // Tính thời gian vào và ra
-      const lateMinutes = isLate ? Math.floor(Math.random() * 30) + 1 : 0;
-      const earlyLeaveMinutes = isEarlyLeave
-        ? Math.floor(Math.random() * 30) + 1
-        : 0;
-
-      // Tính giờ thực tế vào và ra
-      const [shiftStartHour, shiftStartMinute] = shift.start_time
-        .split(":")
-        .map(Number);
-      const [shiftEndHour, shiftEndMinute] = shift.end_time
-        .split(":")
-        .map(Number);
-
-      const clockInHour =
-        shiftStartHour + Math.floor((shiftStartMinute + lateMinutes) / 60);
-      const clockInMinute = (shiftStartMinute + lateMinutes) % 60;
-
-      const clockOutHour =
-        shiftEndHour - Math.floor((shiftEndMinute + earlyLeaveMinutes) / 60);
-      const clockOutMinute = shiftEndMinute - earlyLeaveMinutes;
-
-      // Format thời gian
-      const clockInTime = `${String(clockInHour).padStart(2, "0")}:${String(
-        clockInMinute
-      ).padStart(2, "0")}`;
-      const clockOutTime = `${String(clockOutHour).padStart(2, "0")}:${String(
-        clockOutMinute
-      ).padStart(2, "0")}`;
-
-      // Tính giờ làm thêm (ngẫu nhiên)
-      const overtimeHours =
-        Math.random() < 0.1 ? parseFloat((Math.random() * 2).toFixed(2)) : 0;
-
-      // Xác định trạng thái
-      let status: AttendanceRecord["status"] = "Đúng giờ";
-      if (isLate && isEarlyLeave) {
-        status = "Đi muộn và về sớm";
-      } else if (isLate) {
-        status = "Đi muộn";
-      } else if (isEarlyLeave) {
-        status = "Về sớm";
-      }
-
-      records.push({
-        attendance_id: `A${Date.now()}${records.length}`,
-        employee_id: employee.employee_id,
-        employee_name: employee.full_name,
-        date: date.toISOString().split("T")[0],
-        clock_in_time: clockInTime,
-        clock_out_time: clockOutTime,
-        shift_id: shift.shift_id,
-        shift_name: shift.name,
-        late_minutes: lateMinutes,
-        early_leave_minutes: earlyLeaveMinutes,
-        overtime_hours: overtimeHours,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status,
-      });
-    });
+const fetchWithAuth = async (url: string, token: string) => {
+  const response = await fetch(url, {
+    headers: { Authorization: `x ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
-
-  return records;
+  return response.json();
 };
 
 export default function TimeSheets() {
   const [attendanceRecords, setAttendanceRecords] = useState<
-    AttendanceRecord[]
+    AttendanceResponse["attendanceRecords"]
   >([]);
-  const [filteredRecords, setFilteredRecords] = useState<AttendanceRecord[]>(
-    []
-  );
+  const [filteredRecords, setFilteredRecords] = useState<
+    AttendanceResponse["attendanceRecords"]
+  >([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage] = useState(10);
+  const [isManualAttendanceOpen, setIsManualAttendanceOpen] = useState(false);
+  const [isEditAttendanceOpen, setIsEditAttendanceOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(
+    null
+  );
+  const [isDeleteAttendanceOpen, setIsDeleteAttendanceOpen] = useState(false); // Thêm state cho modal xóa
+  const [attendanceToDelete, setAttendanceToDelete] =
+    useState<AttendanceRecord | null>(null); // Bản ghi cần xóa
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [stats, setStats] = useState<AttendanceResponse["stats"]>({
+    all: 0,
+    onTime: 0,
+    late: 0,
+    earlyLeave: 0,
+    lateAndEarly: 0,
+    absent: 0,
+  });
 
   // Filters
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedShift, setSelectedShift] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof AttendanceRecord | null;
+    key: keyof AttendanceRecord | "employee_name" | "shift_name" | "status";
     direction: "asc" | "desc";
   }>({ key: "date", direction: "desc" });
 
-  // Tạo dữ liệu mẫu khi tải trang
+  // Token xác thực
+  const TOKEN = localStorage.getItem("authToken") || "your-token-from-seed";
+
+  // Lấy dữ liệu từ API
   useEffect(() => {
-    setIsLoading(true);
-    // Giả lập tải dữ liệu từ API
-    setTimeout(() => {
-      const records = generateMockAttendanceData();
-      setAttendanceRecords(records);
-      setFilteredRecords(records);
-      setIsLoading(false);
-    }, 500);
-  }, []);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const employeesData: EmployeesResponse = await fetchWithAuth(
+          "/api/employees?page=1&limit=100",
+          TOKEN
+        );
+        setEmployees(employeesData.employees);
 
-  // Lọc dữ liệu khi thay đổi các điều kiện lọc
+        const shiftsData = await fetchWithAuth(
+          "/api/shifts?page=1&limit=100",
+          TOKEN
+        );
+        setShifts(shiftsData.shifts || []);
+
+        const attendanceData: AttendanceResponse = await fetchWithAuth(
+          `/api/attendance?page=1&limit=100&search=${encodeURIComponent(
+            searchTerm
+          )}&shift_id=${selectedShift !== "all" ? selectedShift : ""}&status=${
+            selectedStatus !== "all" ? selectedStatus : ""
+          }&dateFrom=${selectedDate}`,
+          TOKEN
+        );
+        setAttendanceRecords(attendanceData.attendanceRecords);
+        setFilteredRecords(attendanceData.attendanceRecords);
+        setTotalRecords(attendanceData.total);
+        setStats(attendanceData.stats);
+      } catch (error: unknown) {
+        console.error(
+          "Lỗi khi lấy dữ liệu:",
+          error instanceof Error ? error.message : "Unknown error"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [searchTerm, selectedShift, selectedStatus, selectedDate]);
+
+  // Xử lý chấm công thủ công
+  const handleManualAttendanceSubmit = useCallback(
+    async (data: {
+      employee_id: string;
+      date: string;
+      clock_in_time: string;
+      clock_out_time: string;
+      shift_id: string;
+    }) => {
+      try {
+        const response = await fetch("/api/attendance", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `x ${TOKEN}`,
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const newRecord = await response.json();
+        setAttendanceRecords((prev) => [...prev, newRecord]);
+        setFilteredRecords((prev) => [...prev, newRecord]);
+        setTotalRecords((prev) => prev + 1);
+
+        // Tự động chuyển trang nếu số bản ghi trên trang hiện tại vượt quá 10
+        const newTotalRecords = totalRecords + 1;
+        const newPage = Math.ceil(newTotalRecords / recordsPerPage);
+        setCurrentPage(newPage);
+      } catch (error: unknown) {
+        console.error(
+          "Lỗi khi tạo bản ghi chấm công:",
+          error instanceof Error ? error.message : "Unknown error"
+        );
+      }
+    },
+    [totalRecords, recordsPerPage]
+  );
+
+  // Xử lý chỉnh sửa bản ghi
+  const handleEditAttendanceSubmit = useCallback(
+    async (data: {
+      attendance_id: string;
+      employee_id: string;
+      date: string;
+      clock_in_time: string;
+      clock_out_time: string;
+      shift_id: string;
+    }) => {
+      try {
+        const response = await fetch(`/api/attendance`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `x ${TOKEN}`,
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const updatedRecord = await response.json();
+        setAttendanceRecords((prev) =>
+          prev.map((record) =>
+            record.attendance_id === updatedRecord.attendance_id
+              ? updatedRecord
+              : record
+          )
+        );
+        setFilteredRecords((prev) =>
+          prev.map((record) =>
+            record.attendance_id === updatedRecord.attendance_id
+              ? updatedRecord
+              : record
+          )
+        );
+        setIsEditAttendanceOpen(false);
+        setSelectedRecord(null);
+      } catch (error: unknown) {
+        console.error(
+          "Lỗi khi cập nhật bản ghi chấm công:",
+          error instanceof Error ? error.message : "Unknown error"
+        );
+      }
+    },
+    []
+  );
+
+  // Xử lý xóa bản ghi
+  const handleDelete = async (attendance_id: string) => {
+    try {
+      const response = await fetch("/api/attendance", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `x ${TOKEN}`,
+        },
+        body: JSON.stringify({ attendance_id }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      setAttendanceRecords((prev) =>
+        prev.filter((record) => record.attendance_id !== attendance_id)
+      );
+      setFilteredRecords((prev) =>
+        prev.filter((record) => record.attendance_id !== attendance_id)
+      );
+      setTotalRecords((prev) => prev - 1);
+    } catch (error: unknown) {
+      console.error(
+        "Lỗi khi xóa bản ghi chấm công:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  };
+
+  // Xử lý sắp xếp dữ liệu
   useEffect(() => {
-    let filtered = [...attendanceRecords];
+    const filtered = [...attendanceRecords];
 
-    // Lọc theo tháng và năm
-    filtered = filtered.filter((record) => {
-      const date = new Date(record.date);
-      return (
-        date.getMonth() + 1 === selectedMonth &&
-        date.getFullYear() === selectedYear
-      );
-    });
-
-    // Lọc theo nhân viên
-    if (selectedEmployee !== "all") {
-      filtered = filtered.filter(
-        (record) => record.employee_id === selectedEmployee
-      );
-    }
-
-    // Lọc theo trạng thái
-    if (selectedStatus !== "all") {
-      filtered = filtered.filter((record) => record.status === selectedStatus);
-    }
-
-    // Lọc theo từ khóa tìm kiếm
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (record) =>
-          record.employee_name
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          record.date.includes(searchTerm) ||
-          record.clock_in_time.includes(searchTerm) ||
-          record.clock_out_time.includes(searchTerm) ||
-          record.shift_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Sắp xếp dữ liệu
     if (sortConfig.key) {
       filtered.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof AttendanceRecord];
@@ -301,21 +283,15 @@ export default function TimeSheets() {
     }
 
     setFilteredRecords(filtered);
-    setCurrentPage(1); // Reset về trang đầu tiên sau khi lọc
-  }, [
-    attendanceRecords,
-    selectedMonth,
-    selectedYear,
-    selectedEmployee,
-    selectedStatus,
-    searchTerm,
-    sortConfig,
-  ]);
+    setCurrentPage(1);
+  }, [attendanceRecords, sortConfig]);
 
   // Xử lý thay đổi sắp xếp
-  const handleSort = (key: keyof AttendanceRecord) => {
+  const handleSort = (
+    key: keyof AttendanceRecord | "employee_name" | "shift_name" | "status"
+  ) => {
     setSortConfig({
-      key: key,
+      key,
       direction:
         sortConfig.key === key && sortConfig.direction === "asc"
           ? "desc"
@@ -330,50 +306,65 @@ export default function TimeSheets() {
     indexOfFirstRecord,
     indexOfLastRecord
   );
-  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
-  // Tạo mảng các tháng
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-
-  // Tạo mảng các năm (từ năm hiện tại - 2 đến năm hiện tại + 1)
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 4 }, (_, i) => currentYear - 2 + i);
+  // Hàm định dạng giờ
+  const formatTime = (time: string | null | undefined) => {
+    if (!time) return "-";
+    try {
+      return format(new Date(time), "HH:mm");
+    } catch {
+      return "-";
+    }
+  };
 
   // Hiển thị trạng thái chấm công
-  const renderStatus = (record: AttendanceRecord) => {
+  const renderStatus = (record: AttendanceRecord & { status: string }) => {
+    const baseClasses =
+      "badge badge-sm font-semibold text-center px-2 py-5 transition-all duration-200 hover:shadow-md hover:scale-105";
     switch (record.status) {
       case "Đúng giờ":
         return (
-          <span className="badge badge-success gap-1">
-            <CheckCircle className="w-3 h-3" />
+          <span
+            className={`${baseClasses} badge-success bg-green-500 text-white border-green-600`}
+          >
+            <CheckCircle className="w-3 h-3 mr-1" />
             Đúng giờ
           </span>
         );
       case "Đi muộn":
         return (
-          <span className="badge badge-warning gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Đi muộn ({record.late_minutes} phút)
+          <span
+            className={`${baseClasses} badge-warning bg-yellow-500 text-white border-yellow-600`}
+          >
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Đi muộn
           </span>
         );
       case "Về sớm":
         return (
-          <span className="badge badge-warning gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Về sớm ({record.early_leave_minutes} phút)
+          <span
+            className={`${baseClasses} badge-warning bg-orange-500 text-white border-orange-600`}
+          >
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Về sớm
           </span>
         );
       case "Đi muộn và về sớm":
         return (
-          <span className="badge badge-error gap-1">
-            <XCircle className="w-3 h-3" />
-            Đi muộn và về sớm
+          <span
+            className={`${baseClasses} badge-error bg-red-500 text-white border-red-600`}
+          >
+            <XCircle className="w-3 h-3 mr-1" />
+            Muộn & Về sớm
           </span>
         );
       case "Vắng mặt":
         return (
-          <span className="badge badge-error gap-1">
-            <XCircle className="w-3 h-3" />
+          <span
+            className={`${baseClasses} badge-error bg-gray-600 text-white border-gray-700`}
+          >
+            <XCircle className="w-3 h-3 mr-1" />
             Vắng mặt
           </span>
         );
@@ -387,10 +378,14 @@ export default function TimeSheets() {
       <div className="breadcrumbs text-sm">
         <ul>
           <li>
-            <Link href={"/"}>Trang chủ</Link>
+            <Link href={"/"} className="text-primary">
+              Trang chủ
+            </Link>
           </li>
           <li>
-            <Link href={"/salary/timesheets"}>Bảng chấm công</Link>
+            <Link href={"/salary/timesheets"} className="text-primary">
+              Bảng chấm công
+            </Link>
           </li>
         </ul>
       </div>
@@ -402,17 +397,49 @@ export default function TimeSheets() {
               Bảng Chấm Công
             </h1>
             <div className="flex space-x-2">
-              <button className="btn btn-outline btn-primary flex items-center gap-2">
-                <CalendarCheck className="w-4 h-4" />
-                Xuất báo cáo
-              </button>
-              <button className="btn btn-primary flex items-center gap-2">
-                <DownloadCloud className="w-4 h-4" />
-                Tải xuống
+              <button
+                className="btn btn-primary flex items-center gap-2"
+                onClick={() => setIsManualAttendanceOpen(true)}
+              >
+                <PlusCircle className="w-4 h-4" />
+                Chấm công thủ công
               </button>
             </div>
           </div>
         </header>
+
+        {/* Modal chấm công thủ công */}
+        <ManualAttendanceModal
+          isOpen={isManualAttendanceOpen}
+          onClose={() => setIsManualAttendanceOpen(false)}
+          onSubmit={handleManualAttendanceSubmit}
+          employees={employees}
+          shifts={shifts}
+        />
+
+        {/* Modal chỉnh sửa bản ghi */}
+        <EditAttendanceModal
+          isOpen={isEditAttendanceOpen}
+          onClose={() => {
+            setIsEditAttendanceOpen(false);
+            setSelectedRecord(null);
+          }}
+          onSubmit={handleEditAttendanceSubmit}
+          employees={employees}
+          shifts={shifts}
+          currentRecord={selectedRecord}
+        />
+
+        {/* Modal xác nhận xóa */}
+        <DeleteAttendanceModal
+          isOpen={isDeleteAttendanceOpen}
+          attendanceToDelete={attendanceToDelete}
+          onClose={() => {
+            setIsDeleteAttendanceOpen(false);
+            setAttendanceToDelete(null);
+          }}
+          onConfirm={handleDelete}
+        />
 
         {/* Summary */}
         <div className="mt-6 p-4 bg-base-200 rounded-lg">
@@ -422,9 +449,7 @@ export default function TimeSheets() {
                 <CheckCircle className="w-8 h-8" />
               </div>
               <div className="stat-title">Đúng giờ</div>
-              <div className="stat-value text-primary">
-                {filteredRecords.filter((r) => r.status === "Đúng giờ").length}
-              </div>
+              <div className="stat-value text-primary">{stats.onTime}</div>
             </div>
 
             <div className="stat">
@@ -433,14 +458,7 @@ export default function TimeSheets() {
               </div>
               <div className="stat-title">Đi muộn/Về sớm</div>
               <div className="stat-value text-warning">
-                {
-                  filteredRecords.filter(
-                    (r) =>
-                      r.status === "Đi muộn" ||
-                      r.status === "Về sớm" ||
-                      r.status === "Đi muộn và về sớm"
-                  ).length
-                }
+                {stats.late + stats.earlyLeave + stats.lateAndEarly}
               </div>
             </div>
 
@@ -449,9 +467,7 @@ export default function TimeSheets() {
                 <XCircle className="w-8 h-8" />
               </div>
               <div className="stat-title">Vắng mặt</div>
-              <div className="stat-value text-error">
-                {filteredRecords.filter((r) => r.status === "Vắng mặt").length}
-              </div>
+              <div className="stat-value text-error">{stats.absent}</div>
             </div>
 
             <div className="stat">
@@ -460,16 +476,26 @@ export default function TimeSheets() {
               </div>
               <div className="stat-title">Tổng giờ tăng ca</div>
               <div className="stat-value text-success">
-                {filteredRecords
-                  .reduce((sum, r) => sum + r.overtime_hours, 0)
-                  .toFixed(1)}
+                {filteredRecords.length > 0
+                  ? filteredRecords
+                      .reduce(
+                        (sum, r) =>
+                          sum +
+                          (typeof r.overtime_hours === "number" &&
+                          !isNaN(r.overtime_hours)
+                            ? r.overtime_hours
+                            : 0),
+                        0
+                      )
+                      .toFixed(1)
+                  : "0.0"}
               </div>
             </div>
           </div>
         </div>
 
         {/* Main content */}
-        <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-6">
+        <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-5">
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
               {/* Filters */}
@@ -477,19 +503,12 @@ export default function TimeSheets() {
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="form-control">
                     <div className="input-group">
-                      <select
-                        className="select select-bordered"
-                        value={selectedMonth}
-                        onChange={(e) =>
-                          setSelectedMonth(Number(e.target.value))
-                        }
-                      >
-                        {months.map((month) => (
-                          <option key={month} value={month}>
-                            Tháng {month}
-                          </option>
-                        ))}
-                      </select>
+                      <input
+                        type="date"
+                        className="input input-bordered"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                      />
                     </div>
                   </div>
 
@@ -497,34 +516,13 @@ export default function TimeSheets() {
                     <div className="input-group">
                       <select
                         className="select select-bordered"
-                        value={selectedYear}
-                        onChange={(e) =>
-                          setSelectedYear(Number(e.target.value))
-                        }
+                        value={selectedShift}
+                        onChange={(e) => setSelectedShift(e.target.value)}
                       >
-                        {years.map((year) => (
-                          <option key={year} value={year}>
-                            Năm {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="form-control">
-                    <div className="input-group">
-                      <select
-                        className="select select-bordered"
-                        value={selectedEmployee}
-                        onChange={(e) => setSelectedEmployee(e.target.value)}
-                      >
-                        <option value="all">Tất cả nhân viên</option>
-                        {mockEmployees.map((employee) => (
-                          <option
-                            key={employee.employee_id}
-                            value={employee.employee_id}
-                          >
-                            {employee.full_name}
+                        <option value="all">Tất cả ca làm việc</option>
+                        {shifts.map((shift) => (
+                          <option key={shift.shift_id} value={shift.shift_id}>
+                            {shift.name}
                           </option>
                         ))}
                       </select>
@@ -571,7 +569,6 @@ export default function TimeSheets() {
                     </svg>
                     <input
                       type="search"
-                      required
                       placeholder="Search"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -587,9 +584,7 @@ export default function TimeSheets() {
                     <tr>
                       <th
                         className="cursor-pointer"
-                        onClick={() =>
-                          handleSort("employee_name" as keyof AttendanceRecord)
-                        }
+                        onClick={() => handleSort("employee_name")}
                       >
                         <div className="flex items-center gap-1">
                           Nhân viên
@@ -607,9 +602,7 @@ export default function TimeSheets() {
                       </th>
                       <th
                         className="cursor-pointer"
-                        onClick={() =>
-                          handleSort("shift_name" as keyof AttendanceRecord)
-                        }
+                        onClick={() => handleSort("shift_name")}
                       >
                         <div className="flex items-center gap-1">
                           Ca làm việc
@@ -663,21 +656,20 @@ export default function TimeSheets() {
                       </th>
                       <th
                         className="cursor-pointer"
-                        onClick={() =>
-                          handleSort("status" as keyof AttendanceRecord)
-                        }
+                        onClick={() => handleSort("status")}
                       >
                         <div className="flex items-center gap-1">
                           Trạng thái
                           <ArrowUpDown className="w-4 h-4" />
                         </div>
                       </th>
+                      <th>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan={9} className="text-center py-10">
+                        <td colSpan={10} className="text-center py-10">
                           <span className="loading loading-spinner loading-lg"></span>
                         </td>
                       </tr>
@@ -689,8 +681,8 @@ export default function TimeSheets() {
                             {new Date(record.date).toLocaleDateString("vi-VN")}
                           </td>
                           <td>{record.shift_name}</td>
-                          <td>{record.clock_in_time || "-"}</td>
-                          <td>{record.clock_out_time || "-"}</td>
+                          <td>{formatTime(record.clock_in_time)}</td>
+                          <td>{formatTime(record.clock_out_time)}</td>
                           <td>
                             {record.late_minutes > 0
                               ? `${record.late_minutes} phút`
@@ -707,11 +699,31 @@ export default function TimeSheets() {
                               : "-"}
                           </td>
                           <td>{renderStatus(record)}</td>
+                          <td className="grid">
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => {
+                                setSelectedRecord(record);
+                                setIsEditAttendanceOpen(true);
+                              }}
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => {
+                                setAttendanceToDelete(record);
+                                setIsDeleteAttendanceOpen(true);
+                              }}
+                            >
+                              <XCircle className="w-3 h-3" />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={9} className="text-center py-10">
+                        <td colSpan={10} className="text-center py-10">
                           Không có dữ liệu
                         </td>
                       </tr>
@@ -743,7 +755,6 @@ export default function TimeSheets() {
 
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
                       .filter((page) => {
-                        // Hiển thị 5 trang gần nhất với trang hiện tại
                         const min = Math.max(1, currentPage - 2);
                         const max = Math.min(totalPages, currentPage + 2);
                         return page >= min && page <= max;

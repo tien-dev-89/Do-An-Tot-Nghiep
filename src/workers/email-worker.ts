@@ -32,7 +32,8 @@ async function processEmailQueue() {
             from: `"Hệ thống HRM" <${process.env.GMAIL_USER}>`,
             to: email.to_email,
             subject: email.subject,
-            text: email.body,
+            // text: email.body,
+            html: email.body,
           });
 
           await prisma.emailQueue.update({
@@ -60,5 +61,5 @@ async function processEmailQueue() {
   }
 }
 
-setInterval(processEmailQueue, 30 * 1000);
+setInterval(processEmailQueue, 5 * 1000);
 processEmailQueue().finally(() => prisma.$disconnect());

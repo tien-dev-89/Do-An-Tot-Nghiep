@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import { Role } from "@/types/decentralization";
 
 interface DeleteRoleModalProps {
@@ -8,16 +8,14 @@ interface DeleteRoleModalProps {
   onDelete: () => void;
 }
 
-export const DeleteRoleModal: React.FC<DeleteRoleModalProps> = ({
-  isOpen,
-  roleToDelete,
-  onClose,
-  onDelete,
-}) => {
+export const DeleteRoleModal = forwardRef<
+  HTMLDialogElement,
+  DeleteRoleModalProps
+>(({ isOpen, roleToDelete, onClose, onDelete }, ref) => {
   if (!isOpen || !roleToDelete) return null;
 
   return (
-    <dialog id="delete_role" className="modal">
+    <dialog id="delete_role" className="modal" ref={ref}>
       <div className="modal-box">
         <h3 className="text-lg font-bold text-error">Xác nhận xóa vai trò</h3>
         <p className="py-4">
@@ -35,4 +33,6 @@ export const DeleteRoleModal: React.FC<DeleteRoleModalProps> = ({
       </div>
     </dialog>
   );
-};
+});
+
+DeleteRoleModal.displayName = "DeleteRoleModal";
