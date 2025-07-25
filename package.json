@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy"
+    "prisma:migrate": "prisma migrate deploy",
+    "email-worker": "ts-node src/workers/email-worker.ts"
   },
   "dependencies": {
     "@cloudinary/react": "^1.14.3",
