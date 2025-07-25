@@ -19,4 +19,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
-CMD ["npx", "ts-node", "src/workers/email-worker.ts"]
+# CMD ["npx", "ts-node", "src/workers/email-worker.ts"]
+# Trong stage runner
+CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node src/workers/email-worker.ts"]

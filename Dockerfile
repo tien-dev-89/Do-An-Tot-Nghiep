@@ -35,8 +35,11 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Sao chép thư mục prisma để chạy migration
+COPY --from=builder /app/prisma ./prisma  
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-CMD ["npm", "start"]
+# Thêm migrations trước npm start
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]  
