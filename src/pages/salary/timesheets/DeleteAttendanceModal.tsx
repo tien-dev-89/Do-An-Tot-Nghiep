@@ -95,3 +95,5 @@ export const DeleteAttendanceModal: React.FC<DeleteAttendanceModalProps> = ({
     </dialog>
   );
 };
+
+export default DeleteAttendanceModal;
