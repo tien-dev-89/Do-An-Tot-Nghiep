@@ -32,13 +32,11 @@ model Employees {
   leave_requests      LeaveRequests[]
   notifications       Notifications[]
   payrolls            Payrolls[]
+  RewardPenalties     RewardPenalties[]   @relation("Approver")
   reward_penalties    RewardPenalties[]
+  SalaryConfig        SalaryConfig?
   user_roles          UserRoles[]
   user                Users?
-
-  RewardPenalties RewardPenalties[] @relation("Approver")
-
-  SalaryConfig SalaryConfig[]
 }
 
 model Departments {
@@ -75,9 +73,9 @@ model AttendanceRecords {
   overtime_hours      Decimal   @default(0.00)
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
+  status              String
   employee            Employees @relation(fields: [employee_id], references: [employee_id], onDelete: Cascade)
   shift               Shifts?   @relation(fields: [shift_id], references: [shift_id])
-  status              String
 }
 
 model LeaveRequests {
@@ -120,8 +118,8 @@ model RewardPenalties {
   approver_id String?
   created_at  DateTime            @default(now())
   updated_at  DateTime            @updatedAt
-  employee    Employees           @relation(fields: [employee_id], references: [employee_id], onDelete: Cascade)
   approver    Employees?          @relation("Approver", fields: [approver_id], references: [employee_id])
+  employee    Employees           @relation(fields: [employee_id], references: [employee_id], onDelete: Cascade)
 }
 
 model Roles {
@@ -226,13 +224,12 @@ model Contracts {
 }
 
 model Shifts {
-  shift_id   String   @id @default(uuid())
-  name       String
-  start_time String
-  end_time   String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
+  shift_id          String              @id @default(uuid())
+  name              String
+  start_time        String
+  end_time          String
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @updatedAt
   AttendanceRecords AttendanceRecords[]
 }
 
@@ -240,8 +237,8 @@ model SalaryConfig {
   id                String     @id @default(uuid())
   employee_id       String?    @unique
   base_salary       Decimal    @default(0.00)
-  overtime_rate     Decimal    @default(0.00) // Hệ số thưởng làm thêm (VND/giờ)
-  late_penalty_rate Decimal    @default(0.00) // Hệ số phạt đi muộn/về sớm (VND/phút)
+  overtime_rate     Decimal    @default(0.00)
+  late_penalty_rate Decimal    @default(0.00)
   created_at        DateTime   @default(now())
   updated_at        DateTime   @updatedAt
   employee          Employees? @relation(fields: [employee_id], references: [employee_id])
